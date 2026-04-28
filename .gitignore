@@ -1,0 +1,14 @@
+# Build outputs
+.build/
+.swiftpm/
+DerivedData/
+Magpie.app/
+
+# macOS
+.DS_Store
+
+# Xcode user data
+*.xcuserdata
+*.xcuserdatad
+xcuserdata/
+*.xcworkspace/xcuserdata
