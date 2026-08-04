@@ -42,6 +42,10 @@ struct HistoryView: View {
             searchFocused = true
             ensureValidSelection()
         }
+        .onChange(of: appState.activationToken) { _, _ in
+            searchFocused = true
+            ensureValidSelection()
+        }
         .onChange(of: filtered.map(\.id)) { _, _ in
             ensureValidSelection()
         }
@@ -97,22 +101,33 @@ struct HistoryView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            List(selection: $appState.selectedItemID) {
-                ForEach(Array(filtered.enumerated()), id: \.element.id) { index, item in
-                    ItemRow(
-                        item: item,
-                        quickPasteIndex: index < 9 ? index + 1 : nil,
-                        onTogglePin: { store.togglePin(item) },
-                        onDelete: { store.delete(item) }
-                    )
-                    .tag(item.id)
-                    .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
-                    .listRowSeparator(.hidden)
-                    .onTapGesture(count: 2) { onPick(item) }
+            ScrollViewReader { proxy in
+                List(selection: $appState.selectedItemID) {
+                    ForEach(Array(filtered.enumerated()), id: \.element.id) { index, item in
+                        ItemRow(
+                            item: item,
+                            quickPasteIndex: index < 9 ? index + 1 : nil,
+                            onTogglePin: { store.togglePin(item) },
+                            onDelete: { store.delete(item) }
+                        )
+                        .tag(item.id)
+                        .id(item.id)
+                        .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
+                        .listRowSeparator(.hidden)
+                        .onTapGesture(count: 2) { onPick(item) }
+                    }
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .onChange(of: appState.selectedItemID) { _, id in
+                    guard let id else { return }
+                    proxy.scrollTo(id)
+                }
+                .onChange(of: appState.activationToken) { _, _ in
+                    guard let id = appState.selectedItemID ?? filtered.first?.id else { return }
+                    proxy.scrollTo(id, anchor: .top)
                 }
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
         }
     }
 

@@ -26,23 +26,65 @@ final class Paster {
         write(item)
         PasteboardWatcher.shared.skipNextChangeCount = pasteboard.changeCount
 
-        let target = previousApp
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            target?.activate(options: [])
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                Self.postCommandV()
-            }
+        guard Accessibility.isTrusted else {
+            // Without AX trust the synthetic ⌘V is silently dropped by the
+            // system — the item is on the pasteboard, but nothing pastes.
+            NSLog("Magpie: accessibility not trusted — cannot send ⌘V, prompting")
+            Accessibility.requestIfNeeded()
+            return
+        }
+
+        activatePreviousAppThen {
+            Self.postCommandV()
         }
     }
 
     func type(_ text: String) {
-        let target = previousApp
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            target?.activate(options: [])
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                Self.postUnicodeString(text)
-            }
+        guard Accessibility.isTrusted else {
+            NSLog("Magpie: accessibility not trusted — cannot type, prompting")
+            Accessibility.requestIfNeeded()
+            return
         }
+
+        activatePreviousAppThen {
+            Self.postUnicodeString(text)
+        }
+    }
+
+    /// Bring `previousApp` to the front and run `action` once it is actually
+    /// active. `activate(options:)` is cooperative on macOS 14+ and a fixed
+    /// delay is racy — the ⌘V used to land while Magpie was still frontmost.
+    private func activatePreviousAppThen(_ action: @escaping () -> Void) {
+        guard let target = previousApp, !target.isActive else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { action() }
+            return
+        }
+
+        var observer: NSObjectProtocol?
+        var done = false
+        let fire: () -> Void = {
+            guard !done else { return }
+            done = true
+            if let observer { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
+            // Brief grace period so the target's key window is ready.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { action() }
+        }
+
+        observer = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { note in
+            guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  app.processIdentifier == target.processIdentifier else { return }
+            fire()
+        }
+
+        NSApp.yieldActivation(to: target)
+        target.activate()
+
+        // Fallback in case the activation notification never arrives.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { fire() }
     }
 
     private func write(_ item: ClipboardItem) {

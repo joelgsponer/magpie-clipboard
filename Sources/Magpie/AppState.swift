@@ -13,4 +13,8 @@ final class AppState: ObservableObject {
     @Published var searchText: String = ""
     @Published var selectedItemID: UUID?
     @Published var pasteMode: PasteMode = .paste
+    /// Bumped each time the panel is shown. The view observes this to re-focus
+    /// search and re-select the latest item, since onAppear only fires once
+    /// (the panel is hidden with orderOut, never torn down).
+    @Published var activationToken: Int = 0
 }

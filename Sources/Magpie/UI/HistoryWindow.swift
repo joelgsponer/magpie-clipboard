@@ -38,13 +38,27 @@ final class HistoryWindow {
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
         NSLog("Magpie: panel ordered front, isVisible=\(panel.isVisible)")
+
+        // Fresh state on every show: clear the search, select the latest item,
+        // and signal the view to re-focus/re-scroll (onAppear only fires once).
+        appState.searchText = ""
+        appState.selectedItemID = HistoryStore.shared.items.first?.id
+        appState.pasteMode = .paste
+        appState.activationToken += 1
     }
 
     func hide() {
         panel?.orderOut(nil)
-        appState.searchText = ""
-        appState.selectedItemID = nil
-        appState.pasteMode = .paste
+    }
+
+    /// Hide and hand keyboard focus back to the app that was frontmost
+    /// before the panel appeared (Esc / click-away path).
+    func dismiss() {
+        hide()
+        if let target = Paster.shared.previousApp {
+            NSApp.yieldActivation(to: target)
+            target.activate()
+        }
     }
 
     private static func screenUnderMouse() -> NSScreen? {
@@ -84,11 +98,14 @@ final class HistoryWindow {
         let view = HistoryView(
             onPick: { [weak self] item in
                 guard let self else { return }
+                // Return can be delivered to both the TextField's onSubmit and
+                // the hidden shortcut button; only act while still visible.
+                guard self.panel?.isVisible == true else { return }
                 let mode = self.appState.pasteMode
                 self.hide()
                 Paster.shared.fire(item, mode: mode)
             },
-            onClose: { [weak self] in self?.hide() }
+            onClose: { [weak self] in self?.dismiss() }
         )
         .environmentObject(appState)
 
