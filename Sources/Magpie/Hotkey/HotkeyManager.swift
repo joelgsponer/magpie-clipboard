@@ -23,10 +23,10 @@ final class HotkeyManager {
         Self.active = self
 
         let keyCode: UInt32 = UInt32(kVK_ANSI_V)
-        // Control+Cmd+V — chosen over Cmd+Shift+V because the latter is commonly
-        // grabbed by Paste, Maccy, Raycast, Alfred etc. Carbon RegisterEventHotKey
-        // returns noErr even when another app already holds the chord.
-        let modifiers: UInt32 = UInt32(controlKey | cmdKey)
+        // Cmd+Shift+V. Note: this chord is commonly grabbed by Paste, Maccy,
+        // Raycast, Alfred etc., and Carbon RegisterEventHotKey returns noErr even
+        // when another app already holds it — so the hotkey may silently not fire.
+        let modifiers: UInt32 = UInt32(cmdKey | shiftKey)
 
         let id = EventHotKeyID(signature: Self.signature, id: Self.hotkeyID)
         var ref: EventHotKeyRef?

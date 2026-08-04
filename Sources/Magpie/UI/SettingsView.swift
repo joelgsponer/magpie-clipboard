@@ -8,7 +8,7 @@ struct SettingsView: View {
         Form {
             Section("Hotkey") {
                 LabeledContent("Toggle history") {
-                    Text("⌃⌘V")
+                    Text("⌘⇧V")
                         .font(.system(.body, design: .monospaced))
                         .foregroundStyle(.secondary)
                 }

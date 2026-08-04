@@ -20,10 +20,10 @@ struct MagpieApp: App {
 
 struct MenuContent: View {
     var body: some View {
-        Button("Show History  ⌃⌘V") {
+        Button("Show History  ⌘⇧V") {
             HistoryWindow.shared.show()
         }
-        .keyboardShortcut("v", modifiers: [.command, .control])
+        .keyboardShortcut("v", modifiers: [.command, .shift])
 
         Divider()
 

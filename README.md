@@ -40,13 +40,13 @@ open Magpie.app
 
 1. Magpie lives in the menu bar (clipboard icon).
 2. macOS will prompt for **Accessibility** permission — grant it under System Settings → Privacy & Security → Accessibility. Required for paste-back, which posts ⌘V via `CGEvent`.
-3. Press **⌃⌘V** from any app to open the history window.
+3. Press **⌘⇧V** from any app to open the history window.
 
 ## Keyboard
 
 | Key | Action |
 | --- | --- |
-| `⌃⌘V` | Toggle history (global) |
+| `⌘⇧V` | Toggle history (global) |
 | `↵` | Paste / Type the selected item |
 | `⌘1`–`⌘9` | Paste / Type the Nth visible row |
 | `⌘P` | Pin / unpin the selected item |
