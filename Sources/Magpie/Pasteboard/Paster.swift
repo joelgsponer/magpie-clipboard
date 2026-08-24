@@ -39,6 +39,31 @@ final class Paster {
         }
     }
 
+    /// Insert a plain string (e.g. an emoji) using paste or type semantics.
+    /// Does not create a history entry.
+    func insertText(_ text: String, mode: PasteMode) {
+        if mode == .type {
+            type(text)
+            return
+        }
+        copyText(text)
+        guard Accessibility.isTrusted else {
+            NSLog("Magpie: accessibility not trusted — cannot send ⌘V, prompting")
+            Accessibility.requestIfNeeded()
+            return
+        }
+        activatePreviousAppThen {
+            Self.postCommandV()
+        }
+    }
+
+    /// Write a string to the pasteboard without pasting (⌘↵ "copy only" path).
+    func copyText(_ text: String) {
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        PasteboardWatcher.shared.skipNextChangeCount = pasteboard.changeCount
+    }
+
     func type(_ text: String) {
         guard Accessibility.isTrusted else {
             NSLog("Magpie: accessibility not trusted — cannot type, prompting")

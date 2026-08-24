@@ -42,6 +42,8 @@ open Magpie.app
 2. macOS will prompt for **Accessibility** permission — grant it under System Settings → Privacy & Security → Accessibility. Required for paste-back, which posts ⌘V via `CGEvent`.
 3. Press **⌘⇧V** from any app to open the history window.
 
+> Grant Accessibility once per machine and it sticks across rebuilds — see [Code signing](#code-signing) for why that requires a one-time setup step on a fresh machine.
+
 ## Keyboard
 
 | Key | Action |
@@ -70,6 +72,59 @@ if.app-id = 'local.magpie'
 run = ['layout floating']
 ```
 
+## Code signing
+
+`bundle.sh` signs `Magpie.app` with a **local self-signed certificate** ("Magpie Local Codesign"), not an ad-hoc signature (`codesign --sign -`).
+
+This matters for Accessibility: macOS ties a TCC grant (Accessibility, and similar permissions) to the app's signing identity. An ad-hoc signature has no certificate behind it, so macOS falls back to binding the grant to a hash of the compiled binary — every rebuild produces a different hash, which silently invalidates the existing grant even though the toggle in System Settings still shows enabled. Result: Accessibility prompts on every relaunch after every rebuild. Signing with a real (if self-signed) certificate gives the app a stable identity that survives rebuilds, so the grant only needs to be made once.
+
+### One-time setup on a new machine
+
+Run once per machine, before the first `./bundle.sh`:
+
+```sh
+CERT_NAME="Magpie Local Codesign"
+KEYCHAIN="$HOME/Library/Keychains/login.keychain-db"
+WORKDIR="$(mktemp -d)"
+
+cat > "$WORKDIR/codesign.cnf" <<EOF
+[req]
+distinguished_name = dn
+x509_extensions = v3
+prompt = no
+
+[dn]
+CN = $CERT_NAME
+
+[v3]
+basicConstraints=critical,CA:true
+keyUsage=critical,digitalSignature,keyCertSign
+extendedKeyUsage=critical,codeSigning
+EOF
+
+openssl req -x509 -newkey rsa:2048 \
+  -keyout "$WORKDIR/codesign.key" -out "$WORKDIR/codesign.crt" \
+  -days 7300 -nodes -config "$WORKDIR/codesign.cnf"
+openssl x509 -in "$WORKDIR/codesign.crt" -outform der -out "$WORKDIR/codesign.cer"
+openssl pkcs12 -export -out "$WORKDIR/codesign.p12" \
+  -inkey "$WORKDIR/codesign.key" -in "$WORKDIR/codesign.crt" -passout pass:temporary
+
+# Import the identity (private key + cert) into the login keychain.
+security import "$WORKDIR/codesign.p12" -k "$KEYCHAIN" -P temporary -T /usr/bin/codesign -A
+
+# Trust the certificate for code signing so `codesign` accepts it without warnings.
+security add-trusted-cert -r trustRoot -p codeSign -k "$KEYCHAIN" "$WORKDIR/codesign.cer"
+
+rm -rf "$WORKDIR"
+security find-identity -v -p codesigning   # should list "Magpie Local Codesign"
+```
+
+macOS may show a keychain authentication prompt (password/Touch ID) during the import or trust step — that's expected; approve it.
+
+After that, `./bundle.sh` picks up the identity by name and every build is signed with the same stable identity. Grant Accessibility once and it will keep working across rebuilds.
+
+If you ever see the Accessibility prompt reappear unexpectedly (e.g. after renaming the certificate, or restoring a machine from backup), remove the stale "Magpie" row(s) under System Settings → Privacy & Security → Accessibility and re-grant.
+
 ## Project layout
 
 ```
@@ -91,7 +146,7 @@ Magpie/
 
 ## Why no Xcode project?
 
-Swift macros (`@Model` from SwiftData, `#Preview`, the `KeyboardShortcuts` package) need macro plugins that ship only with Xcode. To stay buildable from the Command Line Tools alone, Magpie uses a plain SwiftPM executable plus `bundle.sh` which assembles `Magpie.app/Contents/{MacOS,Resources,Info.plist}` and ad-hoc codesigns. Persistence is plain `Codable` + JSON; the global hotkey is Carbon `RegisterEventHotKey` directly.
+Swift macros (`@Model` from SwiftData, `#Preview`, the `KeyboardShortcuts` package) need macro plugins that ship only with Xcode. To stay buildable from the Command Line Tools alone, Magpie uses a plain SwiftPM executable plus `bundle.sh` which assembles `Magpie.app/Contents/{MacOS,Resources,Info.plist}` and signs it with a local self-signed certificate (see [Code signing](#code-signing)). Persistence is plain `Codable` + JSON; the global hotkey is Carbon `RegisterEventHotKey` directly.
 
 ## License
 

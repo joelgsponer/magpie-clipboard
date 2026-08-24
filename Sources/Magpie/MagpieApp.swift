@@ -25,6 +25,11 @@ struct MenuContent: View {
         }
         .keyboardShortcut("v", modifiers: [.command, .shift])
 
+        Button("Emoji Picker  ⌘⇧E") {
+            EmojiWindow.shared.show()
+        }
+        .keyboardShortcut("e", modifiers: [.command, .shift])
+
         Divider()
 
         Button("Clear Unpinned History") {
@@ -57,9 +62,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         PasteboardWatcher.shared.start()
         NSLog("Magpie: pasteboard watcher started")
 
-        HotkeyManager.shared.register {
+        HotkeyManager.shared.register(.history) {
             NSLog("Magpie: hotkey fired — toggling history window")
             HistoryWindow.shared.toggle()
+        }
+        HotkeyManager.shared.register(.emoji) {
+            NSLog("Magpie: hotkey fired — toggling emoji window")
+            EmojiWindow.shared.toggle()
         }
 
         let trusted = Accessibility.isTrusted

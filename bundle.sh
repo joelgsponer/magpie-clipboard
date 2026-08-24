@@ -27,9 +27,13 @@ mkdir -p "$APP_DIR/Contents/Resources"
 cp "$BIN_PATH" "$APP_DIR/Contents/MacOS/$APP_NAME"
 cp "$INFO_PLIST" "$APP_DIR/Contents/Info.plist"
 
-# Ad-hoc sign so macOS is willing to grant the app stable Accessibility permission.
-echo "==> codesign --force --sign -"
-codesign --force --deep --sign - "$APP_DIR" >/dev/null
+# Sign with a stable local self-signed identity so Accessibility grants survive
+# rebuilds. Ad-hoc signing (`--sign -`) has no certificate identity, so macOS
+# ties the TCC grant to a hash of the binary itself — every rebuild changes
+# that hash and invalidates the existing Accessibility approval.
+SIGN_IDENTITY="Magpie Local Codesign"
+echo "==> codesign --force --sign \"$SIGN_IDENTITY\""
+codesign --force --deep --sign "$SIGN_IDENTITY" "$APP_DIR" >/dev/null
 
 echo "==> Done: $(pwd)/$APP_DIR"
 echo "Run with:  open $APP_DIR"
