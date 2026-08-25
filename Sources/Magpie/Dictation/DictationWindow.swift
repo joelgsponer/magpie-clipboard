@@ -2,19 +2,26 @@ import AppKit
 import SwiftUI
 
 @MainActor
-final class HistoryWindow {
-    static let shared = HistoryWindow()
+final class DictationWindow {
+    static let shared = DictationWindow()
 
     private var panel: NSPanel?
-    private let appState = AppState()
 
     private init() {}
 
     func toggle() {
-        if let panel, panel.isVisible {
-            hide()
-        } else {
+        switch DictationManager.shared.state {
+        case .idle:
             show()
+            DictationManager.shared.start()
+        case .recording:
+            DictationManager.shared.stop { [weak self] transcript in
+                self?.commit(transcript)
+            }
+        case .requestingAccess, .loadingModel, .transcribing:
+            break
+        case .done, .error:
+            dismiss()
         }
     }
 
@@ -26,23 +33,16 @@ final class HistoryWindow {
 
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
-        NSLog("Magpie: panel ordered front, isVisible=\(panel.isVisible)")
-
-        // Fresh state on every show: clear the search, select the latest item,
-        // and signal the view to re-focus/re-scroll (onAppear only fires once).
-        appState.searchText = ""
-        appState.selectedItemID = HistoryStore.shared.items.first?.id
-        appState.pasteMode = .paste
-        appState.activationToken += 1
     }
 
     func hide() {
         panel?.orderOut(nil)
     }
 
-    /// Hide and hand keyboard focus back to the app that was frontmost
-    /// before the panel appeared (Esc / click-away path).
+    /// Cancel any in-flight recording, hide, and hand keyboard focus back to
+    /// the app that was frontmost before the panel appeared.
     func dismiss() {
+        DictationManager.shared.cancel()
         hide()
         if let target = Paster.shared.previousApp {
             NSApp.yieldActivation(to: target)
@@ -50,14 +50,24 @@ final class HistoryWindow {
         }
     }
 
+    /// Writes the finished transcript to the pasteboard and clipboard
+    /// history. Mirrors Paster.copyText's convention: the pasteboard write
+    /// suppresses PasteboardWatcher's own poll-based ingest, and we record
+    /// history explicitly ourselves.
+    private func commit(_ transcript: String?) {
+        guard let text = transcript, !text.isEmpty else { return }
+        Paster.shared.copyText(text)
+        HistoryStore.shared.ingest(kind: .text, text: text, sourceBundleID: Bundle.main.bundleIdentifier)
+    }
+
     private func makePanel() -> NSPanel {
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 760, height: 540),
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 320),
             styleMask: [.titled, .fullSizeContentView, .resizable, .closable, .utilityWindow],
             backing: .buffered,
             defer: false
         )
-        panel.title = "Magpie"
+        panel.title = "Magpie Dictation"
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
         panel.standardWindowButton(.closeButton)?.isHidden = true
@@ -78,21 +88,9 @@ final class HistoryWindow {
             .stationary,
             .ignoresCycle,
         ]
-        PanelPositioning.applyPersistentPosition(to: panel, autosaveName: "MagpieHistoryPanel")
+        PanelPositioning.applyPersistentPosition(to: panel, autosaveName: "MagpieDictationPanel")
 
-        let view = HistoryView(
-            onPick: { [weak self] item in
-                guard let self else { return }
-                // Return can be delivered to both the TextField's onSubmit and
-                // the hidden shortcut button; only act while still visible.
-                guard self.panel?.isVisible == true else { return }
-                let mode = self.appState.pasteMode
-                self.hide()
-                Paster.shared.fire(item, mode: mode)
-            },
-            onClose: { [weak self] in self?.dismiss() }
-        )
-        .environmentObject(appState)
+        let view = DictationView(onClose: { [weak self] in self?.dismiss() })
 
         let host = NSHostingView(rootView: view)
         host.translatesAutoresizingMaskIntoConstraints = false

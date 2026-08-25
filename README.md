@@ -11,7 +11,9 @@ Magpie watches the system pasteboard, keeps a searchable history of every text, 
 - **⌘1–9 quick paste** — paste the Nth visible row instantly; no Enter needed.
 - **Type mode** — synthesizes Unicode keystrokes via `CGEventKeyboardSetUnicodeString` for fields that block paste; leaves your clipboard untouched.
 - **Pin favorites** — pinned items survive history rotation.
-- **Lightweight** — ~500 KB binary, plain Swift Package Manager build, no Xcode dependency, zero external Swift dependencies.
+- **Emoji picker** — searchable emoji grid with recents, paste/type/copy like history.
+- **Dictation** — on-device speech-to-text (Parakeet TDT via [FluidAudio](https://github.com/FluidInference/FluidAudio), CoreML on the Apple Neural Engine); toggle recording, and the transcript lands in clipboard history and on the pasteboard. Audio never leaves your Mac.
+- **Lightweight-ish** — plain Swift Package Manager build, no Xcode dependency. One external dependency (FluidAudio, for on-device dictation) pulls the binary from ~500 KB to ~18 MB; the speech model itself (~470 MB) downloads separately on first dictation, cached to disk after (`~/Library/Application Support/FluidAudio/`).
 
 ## Requirements
 
@@ -36,11 +38,14 @@ open Magpie.app
 
 > The build runs with `--build-path /tmp/magpie-build` because llbuild's sqlite store can hit I/O errors when `.build/` lives under `~/Documents/` (iCloud, Spotlight, or backup providers may be the cause).
 
+The first build needs network access to fetch the [FluidAudio](https://github.com/FluidInference/FluidAudio) package dependency (used for on-device dictation); subsequent builds use the resolved/cached copy.
+
 ## First run
 
 1. Magpie lives in the menu bar (clipboard icon).
 2. macOS will prompt for **Accessibility** permission — grant it under System Settings → Privacy & Security → Accessibility. Required for paste-back, which posts ⌘V via `CGEvent`.
 3. Press **⌘⇧V** from any app to open the history window.
+4. The first time you dictate (**⌘⇧D**), macOS additionally prompts for **Microphone** access — grant it under System Settings → Privacy & Security → Microphone. Same stability guarantee as Accessibility: grant once per machine, it survives rebuilds (see [Code signing](#code-signing)). That same first dictation also downloads the ~470 MB speech model over the network (one-time; cached to disk after) — the panel shows "Loading speech model…" while this happens, which can take a few minutes depending on your connection.
 
 > Grant Accessibility once per machine and it sticks across rebuilds — see [Code signing](#code-signing) for why that requires a one-time setup step on a fresh machine.
 
@@ -49,14 +54,22 @@ open Magpie.app
 | Key | Action |
 | --- | --- |
 | `⌘⇧V` | Toggle history (global) |
+| `⌘⇧E` | Toggle emoji picker (global) |
+| `⌘⇧D` | Toggle dictation — press to start recording, press again to stop and transcribe (global) |
 | `↵` | Paste / Type the selected item |
 | `⌘1`–`⌘9` | Paste / Type the Nth visible row |
 | `⌘P` | Pin / unpin the selected item |
 | `⌫` | Delete the selected item |
 | `↑` / `↓` | Move selection |
-| `esc` | Close the panel |
+| `esc` | Close the panel / cancel an in-progress recording |
 
 The footer toggle switches between **Paste** (writes to the pasteboard, posts ⌘V) and **Type** (synthesizes keystrokes character-by-character, no pasteboard write). Mode resets to Paste each time the panel closes.
+
+### Dictation
+
+`⌘⇧D` opens a small panel and starts recording immediately (loading the speech model first, one-time per launch — see below). Speak, then press `⌘⇧D` again to stop — the panel shows "Transcribing…" briefly, then writes the result to the pasteboard **and** clipboard history. The panel stays open showing the final transcript until you close it (`⌘⇧D` again, `esc`, or click away); `esc` while still recording cancels instead, discarding the audio.
+
+Transcription is on-device via [FluidAudio](https://github.com/FluidInference/FluidAudio)'s Parakeet TDT v3 model (CoreML, runs on the Apple Neural Engine) — audio never leaves the Mac, and no separate "Speech Recognition" permission is needed (only Microphone). It's **batch, not live-streaming**: audio is captured while recording and transcribed as one pass after you stop, rather than showing a running partial transcript — Parakeet is fast enough (~100x+ realtime) that this is still near-instant. The model itself downloads on first use and is cached under `~/Library/Application Support/FluidAudio/`; every dictation after that reuses the cached model and skips the download.
 
 ## Storage
 
@@ -139,8 +152,10 @@ Magpie/
     Storage/                 JSON history + PNG blobs + dedup/eviction
     Hotkey/                  Carbon RegisterEventHotKey wrapper
     Search/                  Fuzzy subsequence matcher
-    UI/                      SwiftUI views + NSPanel host
-    Permissions/             AX permission helper
+    UI/                      SwiftUI views + NSPanel host + shared panel positioning
+    Emoji/                   Emoji picker window, view, data, recents
+    Dictation/               Dictation window, view, AVAudioEngine + FluidAudio (Parakeet) manager
+    Permissions/             Accessibility / Microphone permission helpers
     Resources/Info.plist
 ```
 

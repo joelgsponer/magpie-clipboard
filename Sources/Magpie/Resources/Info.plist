@@ -22,5 +22,7 @@
     <string>14.0</string>
     <key>NSHumanReadableCopyright</key>
     <string>Personal use</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Magpie uses the microphone to capture audio for on-device dictation. No audio leaves your Mac.</string>
 </dict>
 </plist>

@@ -30,16 +30,6 @@ final class EmojiWindow {
         let panel = panel ?? makePanel()
         self.panel = panel
 
-        let targetScreen = Self.screenUnderMouse() ?? NSScreen.main
-        if let screen = targetScreen {
-            let frame = panel.frame
-            let visible = screen.visibleFrame
-            panel.setFrameOrigin(NSPoint(
-                x: visible.midX - frame.width / 2,
-                y: visible.midY - frame.height / 2
-            ))
-        }
-
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
 
@@ -57,11 +47,6 @@ final class EmojiWindow {
             NSApp.yieldActivation(to: target)
             target.activate()
         }
-    }
-
-    private static func screenUnderMouse() -> NSScreen? {
-        let mouse = NSEvent.mouseLocation
-        return NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) }
     }
 
     private func makePanel() -> NSPanel {
@@ -92,6 +77,7 @@ final class EmojiWindow {
             .stationary,
             .ignoresCycle,
         ]
+        PanelPositioning.applyPersistentPosition(to: panel, autosaveName: "MagpieEmojiPanel")
 
         let view = EmojiView(
             onPick: { [weak self] entry, copyOnly, type in

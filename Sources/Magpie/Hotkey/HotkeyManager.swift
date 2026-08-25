@@ -7,13 +7,15 @@ final class HotkeyManager {
     static let shared = HotkeyManager()
 
     enum Hotkey: UInt32, CaseIterable {
-        case history = 1 // ⌘⇧V
-        case emoji = 2   // ⌘⇧E
+        case history = 1   // ⌘⇧V
+        case emoji = 2     // ⌘⇧E
+        case dictation = 3 // ⌘⇧D
 
         var keyCode: UInt32 {
             switch self {
             case .history: return UInt32(kVK_ANSI_V)
             case .emoji: return UInt32(kVK_ANSI_E)
+            case .dictation: return UInt32(kVK_ANSI_D)
             }
         }
 

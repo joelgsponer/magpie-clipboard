@@ -7,9 +7,15 @@ let package = Package(
     products: [
         .executable(name: "Magpie", targets: ["Magpie"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/FluidInference/FluidAudio.git", from: "0.15.6"),
+    ],
     targets: [
         .executableTarget(
             name: "Magpie",
+            dependencies: [
+                .product(name: "FluidAudio", package: "FluidAudio"),
+            ],
             path: "Sources/Magpie",
             exclude: ["Resources/Info.plist"]
         ),

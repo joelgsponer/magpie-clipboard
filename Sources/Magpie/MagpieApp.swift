@@ -30,6 +30,12 @@ struct MenuContent: View {
         }
         .keyboardShortcut("e", modifiers: [.command, .shift])
 
+        Button("Dictation  ⌘⇧D") {
+            DictationWindow.shared.show()
+            DictationManager.shared.start()
+        }
+        .keyboardShortcut("d", modifiers: [.command, .shift])
+
         Divider()
 
         Button("Clear Unpinned History") {
@@ -69,6 +75,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         HotkeyManager.shared.register(.emoji) {
             NSLog("Magpie: hotkey fired — toggling emoji window")
             EmojiWindow.shared.toggle()
+        }
+        HotkeyManager.shared.register(.dictation) {
+            NSLog("Magpie: hotkey fired — toggling dictation window")
+            DictationWindow.shared.toggle()
         }
 
         let trusted = Accessibility.isTrusted
