@@ -13,12 +13,14 @@ Magpie watches the system pasteboard, keeps a searchable history of every text, 
 - **Pin favorites** — pinned items survive history rotation.
 - **Emoji picker** — searchable emoji grid with recents, paste/type/copy like history.
 - **Dictation** — on-device speech-to-text (Parakeet TDT via [FluidAudio](https://github.com/FluidInference/FluidAudio), CoreML on the Apple Neural Engine); toggle recording, and the transcript lands in clipboard history and on the pasteboard. Audio never leaves your Mac.
+- **Screen capture** — drag-select a region and get back the text in it *plus* a short description of what it is and where it came from, so screenshots are recognisable and searchable in history. Unlike dictation, this one **does** leave your Mac — see [Screen capture](#screen-capture).
 - **Lightweight-ish** — plain Swift Package Manager build, no Xcode dependency. One external dependency (FluidAudio, for on-device dictation) pulls the binary from ~500 KB to ~18 MB; the speech model itself (~470 MB) downloads separately on first dictation, cached to disk after (`~/Library/Application Support/FluidAudio/`).
 
 ## Requirements
 
 - macOS 14 (Sonoma) or later
 - Swift 5.9+ (Command Line Tools is enough — `xcode-select --install`)
+- [Claude Code](https://claude.com/claude-code) on `PATH`, for the screen-capture feature only. Everything else works without it.
 
 ## Build
 
@@ -47,6 +49,8 @@ The first build needs network access to fetch the [FluidAudio](https://github.co
 3. Press **⌘⇧V** from any app to open the history window.
 4. The first time you dictate (**⌘⇧D**), macOS additionally prompts for **Microphone** access — grant it under System Settings → Privacy & Security → Microphone. Same stability guarantee as Accessibility: grant once per machine, it survives rebuilds (see [Code signing](#code-signing)). That same first dictation also downloads the ~470 MB speech model over the network (one-time; cached to disk after) — the panel shows "Loading speech model…" while this happens, which can take a few minutes depending on your connection.
 
+5. The first time you capture (**⌘⇧X**), Magpie asks for confirmation before sending anything to Claude, and macOS prompts for **Screen Recording** access. Unlike the other two, that grant only takes effect after you quit and reopen Magpie.
+
 > Grant Accessibility once per machine and it sticks across rebuilds — see [Code signing](#code-signing) for why that requires a one-time setup step on a fresh machine.
 
 ## Keyboard
@@ -56,6 +60,7 @@ The first build needs network access to fetch the [FluidAudio](https://github.co
 | `⌘⇧V` | Toggle history (global) |
 | `⌘⇧E` | Toggle emoji picker (global) |
 | `⌘⇧D` | Toggle dictation — press to start recording, press again to stop and transcribe (global) |
+| `⌘⇧X` | Capture a screen region and extract its text + context (global) |
 | `↵` | Paste / Type the selected item |
 | `⌘1`–`⌘9` | Paste / Type the Nth visible row |
 | `⌘P` | Pin / unpin the selected item |
@@ -70,6 +75,38 @@ The footer toggle switches between **Paste** (writes to the pasteboard, posts �
 `⌘⇧D` opens a small panel and starts recording immediately (loading the speech model first, one-time per launch — see below). Speak, then press `⌘⇧D` again to stop — the panel shows "Transcribing…" briefly, then writes the result to the pasteboard **and** clipboard history. The panel stays open showing the final transcript until you close it (`⌘⇧D` again, `esc`, or click away); `esc` while still recording cancels instead, discarding the audio.
 
 Transcription is on-device via [FluidAudio](https://github.com/FluidInference/FluidAudio)'s Parakeet TDT v3 model (CoreML, runs on the Apple Neural Engine) — audio never leaves the Mac, and no separate "Speech Recognition" permission is needed (only Microphone). It's **batch, not live-streaming**: audio is captured while recording and transcribed as one pass after you stop, rather than showing a running partial transcript — Parakeet is fast enough (~100x+ realtime) that this is still near-instant. The model itself downloads on first use and is cached under `~/Library/Application Support/FluidAudio/`; every dictation after that reuses the cached model and skips the download.
+
+### Screen capture
+
+`⌘⇧X` puts up the standard macOS crosshair. Drag a region and Magpie hands the
+PNG to the `claude` CLI in headless mode, which returns two things:
+
+- **text** — every character visible in the region, transcribed verbatim.
+- **context** — a couple of sentences on what kind of content it is, which app
+  or site it looks like it came from, and what it's about.
+
+The result panel shows both. `↵` pastes into whatever app you were in before,
+`⌘↵` copies without pasting, and a **Text / Text + context** toggle controls
+which of the two goes on the pasteboard. Either way the screenshot itself is
+stored in history, annotated with both fields — so a capture is findable weeks
+later by searching for something that was *in* it, or for the description of it.
+If a region has no legible text (a photo, an unlabelled chart), the toggle is
+disabled and you get the context alone.
+
+> **This feature sends your screen content to Anthropic.** It is the one part of
+> Magpie that is not local. Whatever is inside the region you select — including
+> passwords, private messages, or confidential material — is transmitted to the
+> API. Magpie asks for confirmation before the first capture, and you can
+> disable it again under Settings → Screen Capture. Each capture costs roughly
+> $0.04 against your Claude account.
+
+Requires **Screen Recording** permission (System Settings → Privacy & Security →
+Screen Recording). Note that macOS only applies this grant on relaunch, so quit
+and reopen Magpie after granting it.
+
+Magpie looks for `claude` in the usual install locations and, failing that, by
+asking your login shell. A GUI app doesn't inherit your terminal's `PATH`, so if
+it can't find it, set the full path under Settings → Screen Capture.
 
 ## Storage
 
@@ -155,7 +192,8 @@ Magpie/
     UI/                      SwiftUI views + NSPanel host + shared panel positioning
     Emoji/                   Emoji picker window, view, data, recents
     Dictation/               Dictation window, view, AVAudioEngine + FluidAudio (Parakeet) manager
-    Permissions/             Accessibility / Microphone permission helpers
+    ScreenCapture/           Region capture, claude -p adapter, result window + view
+    Permissions/             Accessibility / Microphone / Screen Recording helpers
     Resources/Info.plist
 ```
 

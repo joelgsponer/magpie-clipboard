@@ -36,6 +36,11 @@ struct MenuContent: View {
         }
         .keyboardShortcut("d", modifiers: [.command, .shift])
 
+        Button("Screen Capture  ⌘⇧X") {
+            ScreenCaptureWindow.shared.begin()
+        }
+        .keyboardShortcut("x", modifiers: [.command, .shift])
+
         Divider()
 
         Button("Clear Unpinned History") {
@@ -80,6 +85,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSLog("Magpie: hotkey fired — toggling dictation window")
             DictationWindow.shared.toggle()
         }
+        HotkeyManager.shared.register(.screenCapture) {
+            NSLog("Magpie: hotkey fired — starting screen capture")
+            ScreenCaptureWindow.shared.begin()
+        }
+
+        // A crash mid-analysis leaves a plaintext screenshot in /tmp.
+        ScreenCaptureManager.sweepStaleTempFiles()
 
         let trusted = Accessibility.isTrusted
         NSLog("Magpie: AX trusted=\(trusted)")

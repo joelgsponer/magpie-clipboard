@@ -105,6 +105,11 @@ struct ItemRow: View {
         case .text:
             return (item.text ?? "").replacingOccurrences(of: "\n", with: " ")
         case .image:
+            // An analysed capture describes itself; a plain pasteboard image
+            // has nothing better to offer than the generic label.
+            if let context = item.imageContext, !context.isEmpty {
+                return context.replacingOccurrences(of: "\n", with: " ")
+            }
             return "Image"
         case .files:
             let urls = resolveFileURLs()
@@ -130,13 +135,16 @@ struct ItemRow: View {
             }
             return date
         case .image:
+            var parts = ["PNG"]
             if let data = HistoryStore.shared.imageData(for: item),
                let image = NSImage(data: data) {
                 let w = Int(image.size.width.rounded())
                 let h = Int(image.size.height.rounded())
-                return "PNG · \(w)×\(h) · \(date)"
+                parts.append("\(w)×\(h)")
             }
-            return "PNG · \(date)"
+            if item.extractedText?.isEmpty == false { parts.append("Text") }
+            parts.append(date)
+            return parts.joined(separator: " · ")
         case .files:
             let count = item.fileBookmarksB64?.count ?? 0
             if count > 1 {

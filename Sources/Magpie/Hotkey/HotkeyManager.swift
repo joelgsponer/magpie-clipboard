@@ -7,15 +7,20 @@ final class HotkeyManager {
     static let shared = HotkeyManager()
 
     enum Hotkey: UInt32, CaseIterable {
-        case history = 1   // ⌘⇧V
-        case emoji = 2     // ⌘⇧E
-        case dictation = 3 // ⌘⇧D
+        case history = 1       // ⌘⇧V
+        case emoji = 2         // ⌘⇧E
+        case dictation = 3     // ⌘⇧D
+        case screenCapture = 4 // ⌘⇧X
 
         var keyCode: UInt32 {
             switch self {
             case .history: return UInt32(kVK_ANSI_V)
             case .emoji: return UInt32(kVK_ANSI_E)
             case .dictation: return UInt32(kVK_ANSI_D)
+            // X rather than the mnemonic S: these are system-wide and
+            // dispatched before the focused app, so ⌘⇧S would shadow Save As
+            // in every application on the Mac.
+            case .screenCapture: return UInt32(kVK_ANSI_X)
             }
         }
 

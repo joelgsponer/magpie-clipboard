@@ -32,12 +32,23 @@ final class HistoryStore: ObservableObject {
         text: String? = nil,
         imageData: Data? = nil,
         fileBookmarks: [Data]? = nil,
-        sourceBundleID: String? = nil
+        sourceBundleID: String? = nil,
+        extractedText: String? = nil,
+        imageContext: String? = nil
     ) {
         let hash = Self.hash(kind: kind, text: text, imageData: imageData, fileBookmarks: fileBookmarks)
 
         if let idx = items.firstIndex(where: { $0.contentHash == hash }) {
             items[idx].createdAt = Date()
+            // Backfill rather than drop. extractedText/imageContext are
+            // deliberately excluded from the hash — including them would
+            // change every existing image row's hash and duplicate it — so a
+            // re-analysed capture lands here, and without this the analysis we
+            // just paid Claude for would be silently thrown away. Bonus: a
+            // plain ⇧⌘4 screenshot already ingested by PasteboardWatcher gets
+            // upgraded with text + context when a capture runs over it later.
+            if let extractedText { items[idx].extractedText = extractedText }
+            if let imageContext { items[idx].imageContext = imageContext }
             sortAndCap()
             scheduleSave()
             return
@@ -58,6 +69,8 @@ final class HistoryStore: ObservableObject {
             text: text,
             imageBlob: imageBlob,
             fileBookmarksB64: bookmarksB64,
+            extractedText: extractedText,
+            imageContext: imageContext,
             sourceBundleID: sourceBundleID,
             contentHash: hash
         )

@@ -210,7 +210,13 @@ struct HistoryView: View {
             if s.count > 200 { return String(s.prefix(200)) }
             return s
         case .image:
-            return "image"
+            // Cap the extracted text the same way .text does: FuzzyMatcher
+            // scores every item on every keystroke, and a screenshot of dense
+            // output can carry kilobytes.
+            var s = "image"
+            if let context = item.imageContext { s += " " + context }
+            if let extracted = item.extractedText { s += " " + extracted.prefix(200) }
+            return s
         case .files:
             let firstName = item.fileBookmarks?.first
                 .flatMap { data -> URL? in
@@ -283,7 +289,8 @@ struct HistoryView: View {
 
 // MARK: - Footer chip
 
-private struct HintGroup: View {
+/// Shared with ScreenCaptureView's footer.
+struct HintGroup: View {
     let keys: [String]
     let description: String
 

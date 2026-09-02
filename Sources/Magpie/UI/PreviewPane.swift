@@ -42,15 +42,61 @@ struct PreviewPane: View {
         Group {
             if let data = HistoryStore.shared.imageData(for: item),
                let nsImage = NSImage(data: data) {
-                ScrollView([.horizontal, .vertical]) {
-                    Image(nsImage: nsImage)
-                        .resizable()
-                        .scaledToFit()
+                if hasAnalysis(item) {
+                    // Vertical-only scrolling here: text needs a bounded width
+                    // to wrap against, which a horizontal scroll axis removes.
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 14) {
+                            Image(nsImage: nsImage)
+                                .resizable()
+                                .scaledToFit()
+                            if let context = item.imageContext, !context.isEmpty {
+                                analysisSection("CONTEXT") {
+                                    Text(context)
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            if let extracted = item.extractedText, !extracted.isEmpty {
+                                analysisSection("TEXT") {
+                                    Text(extracted)
+                                        .font(.system(.body, design: .monospaced))
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(16)
+                    }
+                } else {
+                    ScrollView([.horizontal, .vertical]) {
+                        Image(nsImage: nsImage)
+                            .resizable()
+                            .scaledToFit()
+                            .padding(16)
+                    }
                 }
             } else {
                 placeholder
             }
+        }
+    }
+
+    private func hasAnalysis(_ item: ClipboardItem) -> Bool {
+        item.imageContext?.isEmpty == false || item.extractedText?.isEmpty == false
+    }
+
+    private func analysisSection<Content: View>(
+        _ label: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .foregroundStyle(.tertiary)
+            content()
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

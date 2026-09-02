@@ -7,6 +7,13 @@ enum FuzzyMatcher {
         if query.isEmpty { return 0 }
         let q = Array(query.lowercased())
         let c = Array(candidate.lowercased())
+        // Original-case characters, materialised once. Indexing `candidate`
+        // directly inside the loop below meant an index(offsetBy:) walk from
+        // startIndex on every character — O(n²) per candidate, re-run over the
+        // whole history on every keystroke. Note this deliberately is *not*
+        // `c`: that one is lowercased, so isUppercase would never fire and the
+        // camelCase bonus would silently die.
+        let orig = Array(candidate)
         guard !c.isEmpty, q.count <= c.count else { return nil }
 
         var qi = 0
@@ -15,12 +22,16 @@ enum FuzzyMatcher {
         var lastChar: Character? = nil
 
         for (i, ch) in c.enumerated() {
+            // Lowercasing changes the character count for a handful of scripts,
+            // so `orig` can be shorter than `c`. Fall back instead of trapping —
+            // the previous index(offsetBy:) form would have crashed outright.
+            let origChar: Character? = i < orig.count ? orig[i] : nil
             let prevWasBoundary = lastChar.map(isBoundary) ?? true
             let isCamelStart: Bool = {
-                guard let prev = lastChar else { return false }
-                return prev.isLowercase && candidate[candidate.index(candidate.startIndex, offsetBy: i)].isUppercase
+                guard let prev = lastChar, let origChar else { return false }
+                return prev.isLowercase && origChar.isUppercase
             }()
-            lastChar = candidate[candidate.index(candidate.startIndex, offsetBy: i)]
+            lastChar = origChar ?? ch
 
             if qi < q.count, ch == q[qi] {
                 if i == prevMatchedIndex + 1 { score += 10 }

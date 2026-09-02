@@ -8,6 +8,16 @@ enum PasteMode: String, CaseIterable, Identifiable {
     var label: String { self == .paste ? "Paste" : "Type" }
 }
 
+/// What a screen capture puts on the pasteboard. Deliberately separate from
+/// PasteMode, which means paste-vs-type and is wired into Paster.fire and the
+/// history footer — the two are orthogonal choices.
+enum CaptureCommitMode: String, CaseIterable, Identifiable {
+    case textOnly
+    case withContext
+    var id: String { rawValue }
+    var label: String { self == .textOnly ? "Text" : "Text + context" }
+}
+
 @MainActor
 final class AppState: ObservableObject {
     @Published var searchText: String = ""
