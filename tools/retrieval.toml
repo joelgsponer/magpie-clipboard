@@ -1,0 +1,46 @@
+[select]
+k = 3
+budget_tokens = 800
+margin = 0.55
+min_score = 0.3
+section_max_chars = 1600
+min_terms = 2
+coverage = 0.5
+max_terms_needed = 4
+
+[weights]
+heading = 4.0
+page = 1.0
+hook = 1.0
+tags = 1.0
+body = 1.0
+cites = 3.0
+expand = 0.3
+centrality = 0.15
+usage = 0.25
+hub = 0.5
+
+[query]
+min_term_len = 3
+max_terms = 24
+use_transcript_files = true
+transcript_tail_kib = 512
+max_files = 40
+candidates = 40
+seeds = 5
+
+[graph]
+similar_k = 3
+access_log_tail = 20000
+
+[gate]
+max_regression = 0.25
+k = 3
+
+[embeddings]
+provider = "none"
+dim = 0
+
+[chunk]
+max_chars = 1200
+group_under = 200
