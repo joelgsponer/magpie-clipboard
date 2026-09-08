@@ -12,6 +12,8 @@ schema: 2
 open Magpie.app
 ```
 
+A cold release build takes well over 10 minutes (FluidAudio whole-module `-O`); run it in the background or use `debug` for iteration. Reinstall with `pkill -x Magpie; open Magpie.app`.
+
 `bundle.sh` builds with `--build-path /tmp/magpie-build` (not `.build/`), copies the
 binary and `Sources/Magpie/Resources/Info.plist` into `Magpie.app/Contents/`, then
 runs `codesign --force --deep --sign "Magpie Local Codesign"`. The first build needs
