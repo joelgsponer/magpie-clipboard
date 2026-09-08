@@ -2,3 +2,4 @@ groom_days=3
 evolve_days=7
 groom_journal_max=10
 self_improve=on
+mind_autopush=on
