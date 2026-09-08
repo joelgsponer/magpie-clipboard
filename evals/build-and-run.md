@@ -8,4 +8,4 @@ schema: 2
 evidence: newborn brain; README build section is the most-asked question
 expect:
 - `./bundle.sh`
-- `open Magpie.app`
+- open Magpie.app

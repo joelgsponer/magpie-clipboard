@@ -1,0 +1,10 @@
+2026-09-09T00:22:31 accessibility-prompt-returns tier1 pass
+2026-09-09T00:22:31 add-new-panel-feature tier1 pass
+2026-09-09T00:22:31 build-and-run tier1 fail expect not found: `open Magpie.app`
+2026-09-09T00:22:32 hotkey-not-firing tier1 pass
+2026-09-09T00:22:32 where-is-history-stored tier1 pass
+2026-09-09T00:22:45 accessibility-prompt-returns tier1 pass
+2026-09-09T00:22:46 add-new-panel-feature tier1 pass
+2026-09-09T00:22:46 build-and-run tier1 pass
+2026-09-09T00:22:46 hotkey-not-firing tier1 pass
+2026-09-09T00:22:46 where-is-history-stored tier1 pass
