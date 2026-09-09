@@ -13,6 +13,7 @@ enum Tool: String, CaseIterable, Identifiable {
     case calculator
     case audio
     case chat
+    case github
 
     var id: String { rawValue }
 
@@ -28,6 +29,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .calculator: return "m"
         case .audio: return "a"
         case .chat: return "t"
+        case .github: return "g"
         }
     }
 
@@ -40,6 +42,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .calculator: return ["=", "k"]
         case .audio: return ["o", "u"]
         case .chat: return ["i", "q"]
+        case .github: return ["h"]
         default: return []
         }
     }
@@ -55,6 +58,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .calculator: return "Math"
         case .audio: return "Audio"
         case .chat: return "Talk"
+        case .github: return "GitHub"
         }
     }
 
@@ -69,6 +73,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .calculator: return "calculator"
         case .audio: return "in / out"
         case .chat: return "Claude chat"
+        case .github: return "new issue"
         }
     }
 
@@ -83,6 +88,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .calculator: return "function"
         case .audio: return "speaker.wave.2.fill"
         case .chat: return "bubble.left.and.text.bubble.fill"
+        case .github: return "smallcircle.filled.circle"
         }
     }
 
@@ -108,6 +114,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .calculator: return Color(red: 0.45, green: 0.85, blue: 0.95)
         case .audio: return Color(red: 0.93, green: 0.42, blue: 0.68)
         case .chat: return Color(red: 0.85, green: 0.55, blue: 0.35)
+        case .github: return Color(red: 0.55, green: 0.52, blue: 0.95)
         }
     }
 
@@ -125,6 +132,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case "calc", "calculator": return .calculator
         case "sound", "output", "input", "devices": return .audio
         case "claude", "ask", "talk": return .chat
+        case "issue", "issues", "gh": return .github
         default: return nil
         }
     }
@@ -149,6 +157,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .calculator: CalculatorWindow.shared.show()
         case .audio: AudioWindow.shared.show()
         case .chat: ChatWindow.shared.show()
+        case .github: GitHubWindow.shared.show()
         }
     }
 
@@ -165,6 +174,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .calculator: CalculatorWindow.shared.toggle()
         case .audio: AudioWindow.shared.toggle()
         case .chat: ChatWindow.shared.toggle()
+        case .github: GitHubWindow.shared.toggle()
         }
     }
 }

@@ -67,6 +67,10 @@ struct MenuContent: View {
             ChatWindow.shared.show()
         }
 
+        Button("GitHub Issue  ⌘␣ G") {
+            GitHubWindow.shared.show()
+        }
+
         Divider()
 
         Button("Clear Unpinned History") {
@@ -156,10 +160,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSLog("Magpie: unknown tool in url: %@", key)
                 continue
             }
-            let ask = URLComponents(url: url, resolvingAgainstBaseURL: false)?
-                .queryItems?.first(where: { $0.name == "ask" })?.value
-            if tool == .chat, let ask, !ask.isEmpty {
+            let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            func param(_ name: String) -> String? { query.first { $0.name == name }?.value }
+            if tool == .chat, let ask = param("ask"), !ask.isEmpty {
                 ChatWindow.shared.show(ask: ask)
+            } else if tool == .github, param("repo") != nil || param("title") != nil {
+                GitHubWindow.shared.show(repo: param("repo"), title: param("title"), body: param("body"))
             } else {
                 tool.toggle()
             }

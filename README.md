@@ -19,6 +19,7 @@ into the app you came from. ⌘Space takes over the chord from Spotlight (see
 | `⌘Space` **M** | Math | expression calculator; Enter pastes the result |
 | `⌘Space` **A** | Audio | pick the output and input device, set volume, mute |
 | `⌘Space` **T** | Talk | a persistent Claude Code chat: system info, quick fixes, the weather |
+| `⌘Space` **G** | GitHub | fuzzy-pick a repository, write a title and body, file the issue |
 
 The clipboard manager is where Magpie started, and it is still the heart of
 it: everything the other tools produce lands in the same history.
@@ -37,6 +38,7 @@ it: everything the other tools produce lands in the same history.
 - **File search** — `NSMetadataQuery` over the Spotlight index: display names for short queries, plus indexed text content once you have typed three letters. Open, reveal in Finder, or copy the path.
 - **Audio** — every CoreAudio device with its transport (Bluetooth, USB, built-in…), the current defaults ticked; `↵` switches, sliders and `-`/`+` set volume, `M` mutes. Alerts follow the output choice like System Settings does.
 - **Talk** — a chat with Claude Code that keeps its session while Magpie runs (`⌘N` starts a fresh one). Replies stream in with markdown rendering; tool calls show as chips; a TV-static indicator flickers while it thinks. Toggles for **full permissions** (`--dangerously-skip-permissions`, so it can run commands and edit files) and **spoken replies** (on-device speech) persist across chats. Model picker: Haiku, Sonnet (default), Opus, Fable.
+- **GitHub** — every repository you own, collaborate on, or belong to via an organisation (through `gh`, cached and refreshed in the background), fuzzy-searched and ranked by how often you file there. Pick one, type a title and markdown body, `⌘↵`. The new issue's link is copied to the clipboard and added to history.
 - **URL scheme** — `open magpie://audio`, `magpie://math`, `magpie://cockpit`, `magpie://chat?ask=weather%20in%20Zurich` open any tool from a script or a window-manager binding.
 - **Calculator** — `2^10/3 + sqrt(2)`, `80*15%`, `fact(20)`, `ans*2`. Enter pastes the plain result back into the previous app and adds it to history; a tape keeps the session's calculations.
 - **Lightweight-ish** — plain Swift Package Manager build, no Xcode dependency. One external dependency (FluidAudio, for on-device dictation) pulls the binary from ~500 KB to ~18 MB; the speech model itself (~470 MB) downloads separately on first dictation, cached to disk after (`~/Library/Application Support/FluidAudio/`).
@@ -106,7 +108,7 @@ The toggle under Settings › Cockpit hands ⌘Space back to Spotlight.
 
 | Key | Action |
 | --- | --- |
-| `⌘Space` | Open the tool chooser (global) — then `C` `E` `D` `X` `L` `S` `M` `A` `T` |
+| `⌘Space` | Open the tool chooser (global) — then `C` `E` `D` `X` `L` `S` `M` `A` `T` `G` |
 | `⌘⇧V` | Toggle history (global) |
 | `⌘⇧E` | Toggle emoji picker (global) |
 | `⌘⇧D` | Toggle dictation — press to start recording, press again to stop and transcribe (global) |
@@ -132,6 +134,21 @@ act, `⌘1`–`⌘9` to act on the Nth row, `esc` to close.
 | Math | paste the result | copy the result | `⇧↵` keep the result on the tape and continue; `⌘K` clear the tape |
 | Audio | make the device the default | — | `⇥` / `←` `→` switch between output and input, `-` `+` volume of that side, `M` mute output |
 | Talk | send | — | `⌥↵` newline, `⌘N` new chat, `⌘.` stop, `⌘P` full permissions, `⌘⇧S` speak replies |
+| GitHub | choose repo / open the created issue | create the issue | `⌘⇧R` change repository, `⌘N` another issue in the same repo, `⌘R` refresh the list |
+
+### GitHub
+
+`⌘Space` **G** needs the [GitHub CLI](https://cli.github.com) (`brew install
+gh`, then `gh auth login`). The picker lists every repository `gh` can see
+for you; the list is cached, so it is instant after the first open, and
+refreshed in the background when older than ten minutes (`⌘R` forces it).
+Enter on a repository opens the form: title, then a markdown body, `⌘↵` to
+file. The issue URL is copied to the clipboard and lands in history, `↵`
+opens it in the browser, `⌘N` starts another issue in the same repository.
+
+From a script: `open "magpie://github?repo=owner/name&title=Broken%20build"`
+opens the form prefilled (`body=` too); nothing is sent until you press `⌘↵`.
+
 
 ### Talk
 
@@ -296,6 +313,7 @@ Magpie/
     Calculator/              Expression evaluator + calculator panel
     Audio/                   CoreAudio device list / defaults / volume + audio panel
     Chat/                    claude -p session manager, markdown blocks, chat panel, TV static
+    GitHub/                  gh wrapper, repo cache, issue composer panel
     UI/                      SwiftUI views + NSPanel host + shared panel positioning
     Emoji/                   Emoji picker window, view, data, recents
     Dictation/               Dictation window, view, AVAudioEngine + FluidAudio (Parakeet) manager
