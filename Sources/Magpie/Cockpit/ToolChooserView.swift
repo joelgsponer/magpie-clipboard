@@ -26,15 +26,6 @@ struct ToolChooserView: View {
                     .onTapGesture { onPick(tool) }
             }
             hub
-            VStack {
-                Spacer()
-                HStack(spacing: 12) {
-                    HintGroup(keys: ["letter"], description: "open")
-                    HintGroup(keys: ["←", "→", "↵"], description: "browse")
-                    HintGroup(keys: ["esc"], description: "close")
-                }
-                .padding(.bottom, 44)
-            }
         }
         .frame(width: Self.size, height: Self.size)
         .background(
@@ -147,6 +138,10 @@ struct ToolChooserView: View {
                         .font(.system(size: 11, weight: .semibold))
                         .tracking(2.5)
                         .foregroundStyle(.secondary)
+                    Text("letter · ← → ↵ · esc")
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(.tertiary)
+                        .padding(.top, 4)
                 }
             }
         }
