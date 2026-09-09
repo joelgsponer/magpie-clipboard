@@ -22,6 +22,17 @@
     <string>14.0</string>
     <key>NSHumanReadableCopyright</key>
     <string>Personal use</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>local.magpie</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>magpie</string>
+            </array>
+        </dict>
+    </array>
     <key>NSMicrophoneUsageDescription</key>
     <string>Magpie uses the microphone to capture audio for on-device dictation. No audio leaves your Mac.</string>
 </dict>

@@ -14,9 +14,11 @@ into the app you came from. ⌘Space takes over the chord from Spotlight (see
 | `⌘Space` **E** | Emoji | searchable emoji grid with recents |
 | `⌘Space` **D** | Dictate | on-device speech-to-text, transcript to clipboard and history |
 | `⌘Space` **X** | Capture | drag a screen region, get its text plus a description (via Claude) |
-| `⌘Space` **A** | Apps | application launcher with fuzzy search and frequency ranking |
+| `⌘Space` **L** | Launch | application launcher with fuzzy search and frequency ranking |
 | `⌘Space` **S** | Search | Spotlight-backed file, folder, and content search |
 | `⌘Space` **M** | Math | expression calculator; Enter pastes the result |
+| `⌘Space` **A** | Audio | pick the output and input device, set volume, mute |
+| `⌘Space` **T** | Talk | a persistent Claude Code chat: system info, quick fixes, the weather |
 
 The clipboard manager is where Magpie started, and it is still the heart of
 it: everything the other tools produce lands in the same history.
@@ -33,6 +35,9 @@ it: everything the other tools produce lands in the same history.
 - **Screen capture** — drag-select a region and get back the text in it *plus* a short description of what it is and where it came from, so screenshots are recognisable and searchable in history. Unlike dictation, this one **does** leave your Mac — see [Screen capture](#screen-capture).
 - **App launcher** — walks the application folders (including the system cryptex where Safari lives), fuzzy-matches names, and ranks by how often you launch each app. Running apps show a green dot.
 - **File search** — `NSMetadataQuery` over the Spotlight index: display names for short queries, plus indexed text content once you have typed three letters. Open, reveal in Finder, or copy the path.
+- **Audio** — every CoreAudio device with its transport (Bluetooth, USB, built-in…), the current defaults ticked; `↵` switches, sliders and `-`/`+` set volume, `M` mutes. Alerts follow the output choice like System Settings does.
+- **Talk** — a chat with Claude Code that keeps its session while Magpie runs (`⌘N` starts a fresh one). Replies stream in with markdown rendering; tool calls show as chips; a TV-static indicator flickers while it thinks. Toggles for **full permissions** (`--dangerously-skip-permissions`, so it can run commands and edit files) and **spoken replies** (on-device speech) persist across chats. Model picker: Haiku, Sonnet (default), Opus, Fable.
+- **URL scheme** — `open magpie://audio`, `magpie://math`, `magpie://cockpit`, `magpie://chat?ask=weather%20in%20Zurich` open any tool from a script or a window-manager binding.
 - **Calculator** — `2^10/3 + sqrt(2)`, `80*15%`, `fact(20)`, `ans*2`. Enter pastes the plain result back into the previous app and adds it to history; a tape keeps the session's calculations.
 - **Lightweight-ish** — plain Swift Package Manager build, no Xcode dependency. One external dependency (FluidAudio, for on-device dictation) pulls the binary from ~500 KB to ~18 MB; the speech model itself (~470 MB) downloads separately on first dictation, cached to disk after (`~/Library/Application Support/FluidAudio/`).
 
@@ -101,7 +106,7 @@ The toggle under Settings › Cockpit hands ⌘Space back to Spotlight.
 
 | Key | Action |
 | --- | --- |
-| `⌘Space` | Open the tool chooser (global) — then `C` `E` `D` `X` `A` `S` `M` |
+| `⌘Space` | Open the tool chooser (global) — then `C` `E` `D` `X` `L` `S` `M` `A` `T` |
 | `⌘⇧V` | Toggle history (global) |
 | `⌘⇧E` | Toggle emoji picker (global) |
 | `⌘⇧D` | Toggle dictation — press to start recording, press again to stop and transcribe (global) |
@@ -115,16 +120,47 @@ The toggle under Settings › Cockpit hands ⌘Space back to Spotlight.
 
 The footer toggle switches between **Paste** (writes to the pasteboard, posts ⌘V) and **Type** (synthesizes keystrokes character-by-character, no pasteboard write). Mode resets to Paste each time the panel closes.
 
-### Apps, Search, Math
+### Launch, Search, Math, Audio
 
-All three follow the history panel's conventions: a search field on top,
-`↑` `↓` to move, `↵` to act, `⌘1`–`⌘9` to act on the Nth row, `esc` to close.
+All four follow the history panel's conventions: `↑` `↓` to move, `↵` to
+act, `⌘1`–`⌘9` to act on the Nth row, `esc` to close.
 
 | Panel | `↵` | `⌘↵` | Other |
 | --- | --- | --- | --- |
-| Apps | launch | reveal in Finder | `⌘R` rescan the application folders |
+| Launch | launch | reveal in Finder | `⌘R` rescan the application folders |
 | Search | open | reveal in Finder | `⌘C` copy the path (also lands in history) |
 | Math | paste the result | copy the result | `⇧↵` keep the result on the tape and continue; `⌘K` clear the tape |
+| Audio | make the device the default | — | `⇥` / `←` `→` switch between output and input, `-` `+` volume of that side, `M` mute output |
+| Talk | send | — | `⌥↵` newline, `⌘N` new chat, `⌘.` stop, `⌘P` full permissions, `⌘⇧S` speak replies |
+
+### Talk
+
+`⌘Space` **T** opens a chat backed by the `claude` CLI (the same binary the
+screen-capture tool uses; see [Screen capture](#screen-capture) for how it
+is located). Each message runs `claude -p … --resume <session>` so the
+conversation keeps its context until you press `⌘N` or quit Magpie; hiding
+the panel with `esc` keeps it. Output streams in as it is generated and is
+rendered as markdown (headings, lists, code blocks with a copy button).
+
+The **Full permissions** switch adds `--dangerously-skip-permissions`, which
+lets Claude run shell commands and edit files without asking — that is what
+makes "what's eating my disk" or "fix the typo in ~/.zshrc" work from the
+panel. Off, Claude can still read files and search the web, but a command
+that needs approval fails (there is no prompt UI in a headless run). The
+**Speak replies** switch reads each finished reply aloud with the system
+voice. Both switches, and the model choice, persist across chats and
+launches.
+
+The assistant lives in **`~/Magpie/`**: that is its working directory, so
+files it writes land there, and its `CLAUDE.md` (seeded on first use, then
+yours to edit) is what steers it — tone, recipes, house rules. Skills go in
+`~/Magpie/.claude/skills/`. The folder button in the panel header opens it.
+
+> Like screen capture, this sends what you type (and whatever Claude reads
+> to answer) to Anthropic. Unlike screen capture there is no confirmation
+> dialog — the act of typing into a chat panel labelled Claude is the
+> consent.
+
 
 Math understands `+ - * / ^ %`, parentheses, `1,000`-style thousands
 separators, `x%` as a percentage, `1e6`, the functions `sqrt cbrt abs floor
@@ -258,6 +294,8 @@ Magpie/
     Launcher/                Application index + launcher panel
     Spotlight/               NSMetadataQuery wrapper + file search panel
     Calculator/              Expression evaluator + calculator panel
+    Audio/                   CoreAudio device list / defaults / volume + audio panel
+    Chat/                    claude -p session manager, markdown blocks, chat panel, TV static
     UI/                      SwiftUI views + NSPanel host + shared panel positioning
     Emoji/                   Emoji picker window, view, data, recents
     Dictation/               Dictation window, view, AVAudioEngine + FluidAudio (Parakeet) manager

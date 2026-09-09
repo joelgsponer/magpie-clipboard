@@ -144,9 +144,12 @@ final class ToolChooserWindow {
         }
         // Letters work with or without ⌘ still held: "⌘Space, C" and
         // "⌘Space then ⌘C" (never let go of ⌘) both open the clipboard.
+        // Any other key cancels, leader-key style — the chooser must never
+        // sit there eating keystrokes meant for the app underneath.
         guard let ch = event.charactersIgnoringModifiers?.first,
               let tool = Tool.matching(key: ch) else {
-            return true // swallow unknown keys so they don't leak to the user's app
+            hide()
+            return true
         }
         pick(tool)
         return true
@@ -196,6 +199,8 @@ final class ToolChooserWindow {
 
         let host = KeyableHostingView(rootView: view)
         panel.contentView = host
+        // One card per tool: let the content dictate the panel size.
+        panel.setContentSize(host.fittingSize)
         return panel
     }
 }

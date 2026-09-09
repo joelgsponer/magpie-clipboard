@@ -47,7 +47,7 @@ struct MenuContent: View {
         }
         .keyboardShortcut("x", modifiers: [.command, .shift])
 
-        Button("Launch App  ⌘␣ A") {
+        Button("Launch App  ⌘␣ L") {
             LauncherWindow.shared.show()
         }
 
@@ -57,6 +57,14 @@ struct MenuContent: View {
 
         Button("Calculator  ⌘␣ M") {
             CalculatorWindow.shared.show()
+        }
+
+        Button("Audio Devices  ⌘␣ A") {
+            AudioWindow.shared.show()
+        }
+
+        Button("Talk to Claude  ⌘␣ T") {
+            ChatWindow.shared.show()
         }
 
         Divider()
@@ -128,6 +136,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Warm the app index so the first ⌘Space A is instant.
         AppIndex.shared.refreshIfStale()
+    }
+
+    /// `magpie://<tool>` toggles a tool from anywhere — a window manager
+    /// binding, a script, `open magpie://audio` (again to close). `magpie://cockpit`
+    /// toggles the chooser; `magpie://chat?ask=...` always shows the chat and
+    /// sends that message straight away.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls {
+            let key = (url.host ?? url.path).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            // %@ rather than interpolation: a percent-encoded URL inside a
+            // format string is parsed as format specifiers.
+            NSLog("Magpie: url %@", url.absoluteString)
+            if key.isEmpty || key == "cockpit" || key == "chooser" {
+                ToolChooserWindow.shared.toggle()
+                continue
+            }
+            guard let tool = Tool.matching(urlKey: key) else {
+                NSLog("Magpie: unknown tool in url: %@", key)
+                continue
+            }
+            let ask = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "ask" })?.value
+            if tool == .chat, let ask, !ask.isEmpty {
+                ChatWindow.shared.show(ask: ask)
+            } else {
+                tool.toggle()
+            }
+        }
     }
 
     /// A menu-bar app launched by LaunchServices has no terminal, and its

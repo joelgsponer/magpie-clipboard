@@ -11,6 +11,8 @@ enum Tool: String, CaseIterable, Identifiable {
     case apps
     case search
     case calculator
+    case audio
+    case chat
 
     var id: String { rawValue }
 
@@ -21,9 +23,11 @@ enum Tool: String, CaseIterable, Identifiable {
         case .emoji: return "e"
         case .dictation: return "d"
         case .capture: return "x"
-        case .apps: return "a"
+        case .apps: return "l"
         case .search: return "s"
         case .calculator: return "m"
+        case .audio: return "a"
+        case .chat: return "t"
         }
     }
 
@@ -31,9 +35,11 @@ enum Tool: String, CaseIterable, Identifiable {
     var aliases: Set<Character> {
         switch self {
         case .clipboard: return ["v"]
-        case .apps: return ["l"]
+        case .apps: return ["p"]
         case .search: return ["f"]
         case .calculator: return ["=", "k"]
+        case .audio: return ["o", "u"]
+        case .chat: return ["i", "q"]
         default: return []
         }
     }
@@ -44,9 +50,11 @@ enum Tool: String, CaseIterable, Identifiable {
         case .emoji: return "Emoji"
         case .dictation: return "Dictate"
         case .capture: return "Capture"
-        case .apps: return "Apps"
+        case .apps: return "Launch"
         case .search: return "Search"
         case .calculator: return "Math"
+        case .audio: return "Audio"
+        case .chat: return "Talk"
         }
     }
 
@@ -56,9 +64,11 @@ enum Tool: String, CaseIterable, Identifiable {
         case .emoji: return "picker"
         case .dictation: return "speech to text"
         case .capture: return "screen region"
-        case .apps: return "launcher"
+        case .apps: return "apps"
         case .search: return "files"
         case .calculator: return "calculator"
+        case .audio: return "in / out"
+        case .chat: return "Claude chat"
         }
     }
 
@@ -71,6 +81,8 @@ enum Tool: String, CaseIterable, Identifiable {
         case .apps: return "square.grid.2x2.fill"
         case .search: return "magnifyingglass"
         case .calculator: return "function"
+        case .audio: return "speaker.wave.2.fill"
+        case .chat: return "bubble.left.and.text.bubble.fill"
         }
     }
 
@@ -94,6 +106,26 @@ enum Tool: String, CaseIterable, Identifiable {
         case .apps: return Color(red: 0.30, green: 0.82, blue: 0.62)
         case .search: return Color(red: 0.95, green: 0.55, blue: 0.25)
         case .calculator: return Color(red: 0.45, green: 0.85, blue: 0.95)
+        case .audio: return Color(red: 0.93, green: 0.42, blue: 0.68)
+        case .chat: return Color(red: 0.85, green: 0.55, blue: 0.35)
+        }
+    }
+
+    /// Resolves the `magpie://<tool>` URL host: the case name, the display
+    /// name, or a handful of synonyms.
+    static func matching(urlKey: String) -> Tool? {
+        let k = urlKey.lowercased()
+        if let exact = allCases.first(where: { $0.rawValue == k || $0.name.lowercased() == k }) { return exact }
+        switch k {
+        case "history", "paste": return .clipboard
+        case "dictate", "voice", "speech": return .dictation
+        case "screenshot", "screen": return .capture
+        case "app", "launcher", "launch": return .apps
+        case "find", "files", "spotlight": return .search
+        case "calc", "calculator": return .calculator
+        case "sound", "output", "input", "devices": return .audio
+        case "claude", "ask", "talk": return .chat
+        default: return nil
         }
     }
 
@@ -115,6 +147,24 @@ enum Tool: String, CaseIterable, Identifiable {
         case .apps: LauncherWindow.shared.show()
         case .search: SpotlightWindow.shared.show()
         case .calculator: CalculatorWindow.shared.show()
+        case .audio: AudioWindow.shared.show()
+        case .chat: ChatWindow.shared.show()
+        }
+    }
+
+    /// Show if hidden, dismiss if visible — what a hotkey or URL wants.
+    @MainActor
+    func toggle() {
+        switch self {
+        case .clipboard: HistoryWindow.shared.toggle()
+        case .emoji: EmojiWindow.shared.toggle()
+        case .dictation: DictationWindow.shared.toggle()
+        case .capture: ScreenCaptureWindow.shared.begin()
+        case .apps: LauncherWindow.shared.toggle()
+        case .search: SpotlightWindow.shared.toggle()
+        case .calculator: CalculatorWindow.shared.toggle()
+        case .audio: AudioWindow.shared.toggle()
+        case .chat: ChatWindow.shared.toggle()
         }
     }
 }
