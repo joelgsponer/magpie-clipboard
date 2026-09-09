@@ -7,6 +7,9 @@ struct SettingsView: View {
     @AppStorage("captureDisclosureAccepted") private var captureEnabled: Bool = false
     @AppStorage("claudeCLIPath") private var claudeCLIPathOverride: String = ""
 
+    @AppStorage(LeaderKey.enabledKey) private var leaderEnabled: Bool = true
+
+    @State private var leaderStatus: LeaderKey.Status = LeaderKey.shared.status
     @State private var accessibilityTrusted: Bool = Accessibility.isTrusted
     @State private var screenRecordingTrusted: Bool = ScreenRecording.isTrusted
     @State private var resolvedClaudePath: String?
@@ -14,11 +17,33 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("Hotkeys") {
-                LabeledContent("Toggle history") { shortcut("⌘⇧V") }
-                LabeledContent("Emoji picker") { shortcut("⌘⇧E") }
-                LabeledContent("Dictation") { shortcut("⌘⇧D") }
-                LabeledContent("Screen capture") { shortcut("⌘⇧X") }
+            Section("Cockpit") {
+                Toggle("⌘Space opens the tool chooser", isOn: $leaderEnabled)
+                    .onChange(of: leaderEnabled) { _, on in
+                        if on { LeaderKey.shared.enable() } else { LeaderKey.shared.disable() }
+                        leaderStatus = LeaderKey.shared.status
+                    }
+                HStack(alignment: .top) {
+                    Image(systemName: leaderStatus == .eventTap ? "checkmark.circle.fill" : (leaderStatus == .disabled ? "circle" : "exclamationmark.triangle.fill"))
+                        .foregroundStyle(leaderStatus == .eventTap ? .green : (leaderStatus == .disabled ? .secondary : .orange))
+                    Text(leaderStatus.label)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Text("Magpie takes ⌘Space over from Spotlight. Press it, then a letter — or hold ⌘ and press Space then the letter. Spotlight stays reachable from the menu bar, and ⌘Space S is Magpie's own file search.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                ForEach(Tool.allCases) { tool in
+                    LabeledContent(tool.name) {
+                        HStack(spacing: 10) {
+                            if let direct = tool.directHotkey {
+                                shortcut(direct)
+                            }
+                            shortcut("⌘␣ \(String(tool.letter).uppercased())")
+                        }
+                    }
+                }
                 Text("Rebinding is not available in v1.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -105,6 +130,8 @@ struct SettingsView: View {
         .frame(width: 480)
         .padding()
         .onAppear {
+            leaderStatus = LeaderKey.shared.status
+            LeaderKey.shared.onStatusChange = { status in leaderStatus = status }
             accessibilityTrusted = Accessibility.isTrusted
             screenRecordingTrusted = ScreenRecording.isTrusted
             detectClaudePath()

@@ -20,6 +20,12 @@ struct MagpieApp: App {
 
 struct MenuContent: View {
     var body: some View {
+        Button("Cockpit  ⌘␣") {
+            ToolChooserWindow.shared.toggle()
+        }
+
+        Divider()
+
         Button("Show History  ⌘⇧V") {
             HistoryWindow.shared.show()
         }
@@ -40,6 +46,18 @@ struct MenuContent: View {
             ScreenCaptureWindow.shared.begin()
         }
         .keyboardShortcut("x", modifiers: [.command, .shift])
+
+        Button("Launch App  ⌘␣ A") {
+            LauncherWindow.shared.show()
+        }
+
+        Button("Search Files  ⌘␣ S") {
+            SpotlightWindow.shared.show()
+        }
+
+        Button("Calculator  ⌘␣ M") {
+            CalculatorWindow.shared.show()
+        }
 
         Divider()
 
@@ -96,5 +114,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let trusted = Accessibility.isTrusted
         NSLog("Magpie: AX trusted=\(trusted)")
         if !trusted { _ = Accessibility.requestIfNeeded() }
+
+        // The leader: ⌘Space opens the tool chooser. On by default; the
+        // Settings toggle flips the same default.
+        UserDefaults.standard.register(defaults: [LeaderKey.enabledKey: true])
+        LeaderKey.shared.onTrigger = {
+            ToolChooserWindow.shared.toggle()
+        }
+        if UserDefaults.standard.bool(forKey: LeaderKey.enabledKey) {
+            LeaderKey.shared.enable()
+        }
+
+        // Warm the app index so the first ⌘Space A is instant.
+        AppIndex.shared.refreshIfStale()
     }
 }

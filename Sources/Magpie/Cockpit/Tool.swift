@@ -1,0 +1,120 @@
+import AppKit
+import SwiftUI
+
+/// Everything the cockpit can open. Declaration order is the order the
+/// chooser shows them in, left to right.
+enum Tool: String, CaseIterable, Identifiable {
+    case clipboard
+    case emoji
+    case dictation
+    case capture
+    case apps
+    case search
+    case calculator
+
+    var id: String { rawValue }
+
+    /// The key that picks this tool from the chooser.
+    var letter: Character {
+        switch self {
+        case .clipboard: return "c"
+        case .emoji: return "e"
+        case .dictation: return "d"
+        case .capture: return "x"
+        case .apps: return "a"
+        case .search: return "s"
+        case .calculator: return "m"
+        }
+    }
+
+    /// Extra keys that also pick this tool (not shown on the badge).
+    var aliases: Set<Character> {
+        switch self {
+        case .clipboard: return ["v"]
+        case .apps: return ["l"]
+        case .search: return ["f"]
+        case .calculator: return ["=", "k"]
+        default: return []
+        }
+    }
+
+    var name: String {
+        switch self {
+        case .clipboard: return "Clipboard"
+        case .emoji: return "Emoji"
+        case .dictation: return "Dictate"
+        case .capture: return "Capture"
+        case .apps: return "Apps"
+        case .search: return "Search"
+        case .calculator: return "Math"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .clipboard: return "history"
+        case .emoji: return "picker"
+        case .dictation: return "speech to text"
+        case .capture: return "screen region"
+        case .apps: return "launcher"
+        case .search: return "files"
+        case .calculator: return "calculator"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .clipboard: return "doc.on.clipboard.fill"
+        case .emoji: return "face.smiling.fill"
+        case .dictation: return "waveform"
+        case .capture: return "viewfinder"
+        case .apps: return "square.grid.2x2.fill"
+        case .search: return "magnifyingglass"
+        case .calculator: return "function"
+        }
+    }
+
+    /// The system-wide chord that opens the tool without the leader, if any.
+    var directHotkey: String? {
+        switch self {
+        case .clipboard: return "⌘⇧V"
+        case .emoji: return "⌘⇧E"
+        case .dictation: return "⌘⇧D"
+        case .capture: return "⌘⇧X"
+        default: return nil
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .clipboard: return Color(red: 0.36, green: 0.62, blue: 1.0)
+        case .emoji: return Color(red: 1.0, green: 0.78, blue: 0.25)
+        case .dictation: return Color(red: 1.0, green: 0.42, blue: 0.42)
+        case .capture: return Color(red: 0.62, green: 0.48, blue: 1.0)
+        case .apps: return Color(red: 0.30, green: 0.82, blue: 0.62)
+        case .search: return Color(red: 0.95, green: 0.55, blue: 0.25)
+        case .calculator: return Color(red: 0.45, green: 0.85, blue: 0.95)
+        }
+    }
+
+    static func matching(key: Character) -> Tool? {
+        let k = Character(key.lowercased())
+        return allCases.first { $0.letter == k || $0.aliases.contains(k) }
+    }
+
+    /// Open the tool. Callers must have already hidden the chooser so that
+    /// `NSWorkspace.frontmostApplication` still points at the user's app —
+    /// every panel's show() reads it to know where to paste back.
+    @MainActor
+    func open() {
+        switch self {
+        case .clipboard: HistoryWindow.shared.show()
+        case .emoji: EmojiWindow.shared.show()
+        case .dictation: DictationWindow.shared.toggle()
+        case .capture: ScreenCaptureWindow.shared.begin()
+        case .apps: LauncherWindow.shared.show()
+        case .search: SpotlightWindow.shared.show()
+        case .calculator: CalculatorWindow.shared.show()
+        }
+    }
+}

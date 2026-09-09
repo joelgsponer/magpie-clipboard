@@ -1,8 +1,25 @@
 # Magpie
 
-A small, fast macOS clipboard manager. Native Swift + SwiftUI, no Xcode required.
+A macOS cockpit behind one key. Native Swift + SwiftUI, no Xcode required.
 
-Magpie watches the system pasteboard, keeps a searchable history of every text, image, and file copy, and pastes (or types) the selected entry back into the previously focused app via a global hotkey.
+Press **⌘Space** and a tool chooser appears — a row of cards, each with a
+letter, like a weapon wheel in a game. Press the letter and that tool opens
+on top of whatever you were doing; when it is done it pastes its result back
+into the app you came from. ⌘Space takes over the chord from Spotlight (see
+[The leader key](#the-leader-key)).
+
+| Key | Tool | What it does |
+| --- | --- | --- |
+| `⌘Space` **C** | Clipboard | searchable history of every text, image, and file copy; paste or type it back |
+| `⌘Space` **E** | Emoji | searchable emoji grid with recents |
+| `⌘Space` **D** | Dictate | on-device speech-to-text, transcript to clipboard and history |
+| `⌘Space` **X** | Capture | drag a screen region, get its text plus a description (via Claude) |
+| `⌘Space` **A** | Apps | application launcher with fuzzy search and frequency ranking |
+| `⌘Space` **S** | Search | Spotlight-backed file, folder, and content search |
+| `⌘Space` **M** | Math | expression calculator; Enter pastes the result |
+
+The clipboard manager is where Magpie started, and it is still the heart of
+it: everything the other tools produce lands in the same history.
 
 ## Highlights
 
@@ -14,6 +31,9 @@ Magpie watches the system pasteboard, keeps a searchable history of every text, 
 - **Emoji picker** — searchable emoji grid with recents, paste/type/copy like history.
 - **Dictation** — on-device speech-to-text (Parakeet TDT via [FluidAudio](https://github.com/FluidInference/FluidAudio), CoreML on the Apple Neural Engine); toggle recording, and the transcript lands in clipboard history and on the pasteboard. Audio never leaves your Mac.
 - **Screen capture** — drag-select a region and get back the text in it *plus* a short description of what it is and where it came from, so screenshots are recognisable and searchable in history. Unlike dictation, this one **does** leave your Mac — see [Screen capture](#screen-capture).
+- **App launcher** — walks the application folders (including the system cryptex where Safari lives), fuzzy-matches names, and ranks by how often you launch each app. Running apps show a green dot.
+- **File search** — `NSMetadataQuery` over the Spotlight index: display names for short queries, plus indexed text content once you have typed three letters. Open, reveal in Finder, or copy the path.
+- **Calculator** — `2^10/3 + sqrt(2)`, `80*15%`, `fact(20)`, `ans*2`. Enter pastes the plain result back into the previous app and adds it to history; a tape keeps the session's calculations.
 - **Lightweight-ish** — plain Swift Package Manager build, no Xcode dependency. One external dependency (FluidAudio, for on-device dictation) pulls the binary from ~500 KB to ~18 MB; the speech model itself (~470 MB) downloads separately on first dictation, cached to disk after (`~/Library/Application Support/FluidAudio/`).
 
 ## Requirements
@@ -46,17 +66,42 @@ The first build needs network access to fetch the [FluidAudio](https://github.co
 
 1. Magpie lives in the menu bar (clipboard icon).
 2. macOS will prompt for **Accessibility** permission — grant it under System Settings → Privacy & Security → Accessibility. Required for paste-back, which posts ⌘V via `CGEvent`.
-3. Press **⌘⇧V** from any app to open the history window.
+3. Press **⌘Space** from any app to open the cockpit, then **C** for the history window. (The direct chords still work: **⌘⇧V** opens history without the chooser.)
 4. The first time you dictate (**⌘⇧D**), macOS additionally prompts for **Microphone** access — grant it under System Settings → Privacy & Security → Microphone. Same stability guarantee as Accessibility: grant once per machine, it survives rebuilds (see [Code signing](#code-signing)). That same first dictation also downloads the ~470 MB speech model over the network (one-time; cached to disk after) — the panel shows "Loading speech model…" while this happens, which can take a few minutes depending on your connection.
 
 5. The first time you capture (**⌘⇧X**), Magpie asks for confirmation before sending anything to Claude, and macOS prompts for **Screen Recording** access. Unlike the other two, that grant only takes effect after you quit and reopen Magpie.
 
 > Grant Accessibility once per machine and it sticks across rebuilds — see [Code signing](#code-signing) for why that requires a one-time setup step on a fresh machine.
 
+## The leader key
+
+Spotlight owns ⌘Space as a system-level hotkey, and an ordinary Carbon
+`RegisterEventHotKey` for the same chord loses to it silently. Magpie instead
+installs a `CGEvent` tap at the HID level, at the head of the event pipeline:
+it sees the key-down before the symbolic-hotkey layer does, swallows it, and
+Spotlight never fires. The same tap grabs the keyboard while the chooser is
+up, so the letter you press never leaks into the app underneath, and the
+chooser itself never has to become the key window (Magpie is not activated;
+the app you were in stays frontmost, which is how every tool knows where to
+paste back).
+
+The tap needs the Accessibility permission Magpie already requires for
+paste-back. If it cannot be created, Magpie falls back to a Carbon hotkey
+and the Settings pane says so — in that case turn off Spotlight's shortcut
+under System Settings › Keyboard › Keyboard Shortcuts › Spotlight so the
+fallback wins. Spotlight itself stays reachable from the menu bar icon, and
+`⌘Space` **S** is Magpie's own search over the same index.
+
+Two ways to chord, both work: press `⌘Space`, let go, press the letter; or
+hold `⌘`, tap Space, tap the letter, release. `esc` or a second `⌘Space`
+closes the chooser; `←` `→` and `↵` browse it; clicking a card opens it.
+The toggle under Settings › Cockpit hands ⌘Space back to Spotlight.
+
 ## Keyboard
 
 | Key | Action |
 | --- | --- |
+| `⌘Space` | Open the tool chooser (global) — then `C` `E` `D` `X` `A` `S` `M` |
 | `⌘⇧V` | Toggle history (global) |
 | `⌘⇧E` | Toggle emoji picker (global) |
 | `⌘⇧D` | Toggle dictation — press to start recording, press again to stop and transcribe (global) |
@@ -69,6 +114,26 @@ The first build needs network access to fetch the [FluidAudio](https://github.co
 | `esc` | Close the panel / cancel an in-progress recording |
 
 The footer toggle switches between **Paste** (writes to the pasteboard, posts ⌘V) and **Type** (synthesizes keystrokes character-by-character, no pasteboard write). Mode resets to Paste each time the panel closes.
+
+### Apps, Search, Math
+
+All three follow the history panel's conventions: a search field on top,
+`↑` `↓` to move, `↵` to act, `⌘1`–`⌘9` to act on the Nth row, `esc` to close.
+
+| Panel | `↵` | `⌘↵` | Other |
+| --- | --- | --- | --- |
+| Apps | launch | reveal in Finder | `⌘R` rescan the application folders |
+| Search | open | reveal in Finder | `⌘C` copy the path (also lands in history) |
+| Math | paste the result | copy the result | `⇧↵` keep the result on the tape and continue; `⌘K` clear the tape |
+
+Math understands `+ - * / ^ %`, parentheses, `1,000`-style thousands
+separators, `x%` as a percentage, `1e6`, the functions `sqrt cbrt abs floor
+ceil round ln log log2 exp sin cos tan asin acos atan min max avg sum fact`,
+the constants `pi e tau`, and `ans` for the previous result. Results are
+pasted plain (no grouping) so they drop straight into a spreadsheet cell.
+
+Search waits for two characters before querying — one letter against the
+whole index gathers tens of thousands of rows before anything can show.
 
 ### Dictation
 
@@ -189,6 +254,10 @@ Magpie/
     Storage/                 JSON history + PNG blobs + dedup/eviction
     Hotkey/                  Carbon RegisterEventHotKey wrapper
     Search/                  Fuzzy subsequence matcher
+    Cockpit/                 Tool registry, ⌘Space leader (CGEvent tap + Carbon fallback), chooser HUD
+    Launcher/                Application index + launcher panel
+    Spotlight/               NSMetadataQuery wrapper + file search panel
+    Calculator/              Expression evaluator + calculator panel
     UI/                      SwiftUI views + NSPanel host + shared panel positioning
     Emoji/                   Emoji picker window, view, data, recents
     Dictation/               Dictation window, view, AVAudioEngine + FluidAudio (Parakeet) manager
