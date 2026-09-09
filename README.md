@@ -16,7 +16,7 @@ into the app you came from. ⌘Space takes over the chord from Spotlight (see
 | `⌘Space` **X** | Capture | drag a screen region, get its text plus a description (via Claude) |
 | `⌘Space` **L** | Launch | application launcher with fuzzy search and frequency ranking |
 | `⌘Space` **S** | Search | Spotlight-backed file, folder, and content search |
-| `⌘Space` **M** | Math | expression calculator; Enter pastes the result |
+| `⌘Space` **R** | R | a live R session with a plot pane |
 | `⌘Space` **A** | Audio | pick the output and input device, set volume, mute |
 | `⌘Space` **T** | Talk | a persistent Claude Code chat: system info, quick fixes, the weather |
 | `⌘Space` **G** | GitHub | fuzzy-pick a repository, write a title and body, file the issue |
@@ -40,7 +40,7 @@ it: everything the other tools produce lands in the same history.
 - **Talk** — a chat with Claude Code that keeps its session while Magpie runs (`⌘N` starts a fresh one). Replies stream in with markdown rendering; tool calls show as chips; a TV-static indicator flickers while it thinks. Toggles for **full permissions** (`--dangerously-skip-permissions`, so it can run commands and edit files) and **spoken replies** (on-device speech) persist across chats. Model picker: Haiku, Sonnet (default), Opus, Fable.
 - **GitHub** — every repository you own, collaborate on, or belong to via an organisation (through `gh`, cached and refreshed in the background), fuzzy-searched and ranked by how often you file there. Pick one, type a title and markdown body, `⌘↵`. The new issue's link is copied to the clipboard and added to history.
 - **URL scheme** — `open magpie://audio`, `magpie://math`, `magpie://cockpit`, `magpie://chat?ask=weather%20in%20Zurich` open any tool from a script or a window-manager binding.
-- **Calculator** — `2^10/3 + sqrt(2)`, `80*15%`, `fact(20)`, `ans*2`. Enter pastes the plain result back into the previous app and adds it to history; a tape keeps the session's calculations.
+- **R console** — a persistent R process (`R --vanilla --no-echo`) behind a console: `2^10/3`, `summary(lm(mpg ~ wt, mtcars))`, `hist(rnorm(1e4))`. Anything drawn with base graphics or ggplot2 lands in a plot pane as a PNG; copy it (it goes into clipboard history as an image) or reveal the file. Errors, warnings, and messages print inline; the session keeps its variables until you restart it.
 - **Lightweight-ish** — plain Swift Package Manager build, no Xcode dependency. One external dependency (FluidAudio, for on-device dictation) pulls the binary from ~500 KB to ~18 MB; the speech model itself (~470 MB) downloads separately on first dictation, cached to disk after (`~/Library/Application Support/FluidAudio/`).
 
 ## Requirements
@@ -108,7 +108,7 @@ The toggle under Settings › Cockpit hands ⌘Space back to Spotlight.
 
 | Key | Action |
 | --- | --- |
-| `⌘Space` | Open the tool chooser (global) — then `C` `E` `D` `X` `L` `S` `M` `A` `T` `G` |
+| `⌘Space` | Open the tool chooser (global) — then `C` `E` `D` `X` `L` `S` `R` `A` `T` `G` |
 | `⌘⇧V` | Toggle history (global) |
 | `⌘⇧E` | Toggle emoji picker (global) |
 | `⌘⇧D` | Toggle dictation — press to start recording, press again to stop and transcribe (global) |
@@ -122,16 +122,16 @@ The toggle under Settings › Cockpit hands ⌘Space back to Spotlight.
 
 The footer toggle switches between **Paste** (writes to the pasteboard, posts ⌘V) and **Type** (synthesizes keystrokes character-by-character, no pasteboard write). Mode resets to Paste each time the panel closes.
 
-### Launch, Search, Math, Audio
+### Launch, Search, R, Audio
 
-All four follow the history panel's conventions: `↑` `↓` to move, `↵` to
+All follow the history panel's conventions: `↑` `↓` to move, `↵` to
 act, `⌘1`–`⌘9` to act on the Nth row, `esc` to close.
 
 | Panel | `↵` | `⌘↵` | Other |
 | --- | --- | --- | --- |
 | Launch | launch | reveal in Finder | `⌘R` rescan the application folders |
 | Search | open | reveal in Finder | `⌘C` copy the path (also lands in history) |
-| Math | paste the result | copy the result | `⇧↵` keep the result on the tape and continue; `⌘K` clear the tape |
+| R | run | — | `⌥↵` newline, `⌘↑`/`⌘↓` history, `⌘⇧C` copy last output, `⌘⇧P` copy plot, `⌘K` clear, `⌘R` restart the session |
 | Audio | make the device the default | — | `⇥` / `←` `→` switch between output and input, `-` `+` volume of that side, `M` mute output |
 | Talk | send | — | `⌥↵` newline, `⌘N` new chat, `⌘.` stop, `⌘P` full permissions, `⌘⇧S` speak replies |
 | GitHub | choose repo / open the created issue | create the issue | `⌘⇧R` change repository, `⌘N` another issue in the same repo, `⌘R` refresh the list |
@@ -179,11 +179,12 @@ yours to edit) is what steers it — tone, recipes, house rules. Skills go in
 > consent.
 
 
-Math understands `+ - * / ^ %`, parentheses, `1,000`-style thousands
-separators, `x%` as a percentage, `1e6`, the functions `sqrt cbrt abs floor
-ceil round ln log log2 exp sin cos tan asin acos atan min max avg sum fact`,
-the constants `pi e tau`, and `ans` for the previous result. Results are
-pasted plain (no grouping) so they drop straight into a spreadsheet cell.
+R needs an R installation (`brew install r`, or the CRAN package). Each
+command is evaluated in the session's global environment, so variables and
+loaded packages persist between commands and across panel opens. Plots are
+rendered through `options(device)` into PNG files; the newest one shows on
+the right. The console runs in `~/Magpie`, so `write.csv()` and friends land
+there. From a script: `open "magpie://r?run=hist(rnorm(1000))"`.
 
 Search waits for two characters before querying — one letter against the
 whole index gathers tens of thousands of rows before anything can show.
@@ -310,7 +311,7 @@ Magpie/
     Cockpit/                 Tool registry, ⌘Space leader (CGEvent tap + Carbon fallback), chooser HUD
     Launcher/                Application index + launcher panel
     Spotlight/               NSMetadataQuery wrapper + file search panel
-    Calculator/              Expression evaluator + calculator panel
+    RConsole/                Persistent R process, plot capture, console panel
     Audio/                   CoreAudio device list / defaults / volume + audio panel
     Chat/                    claude -p session manager, markdown blocks, chat panel, TV static
     GitHub/                  gh wrapper, repo cache, issue composer panel

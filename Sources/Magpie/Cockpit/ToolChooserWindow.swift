@@ -43,10 +43,7 @@ final class ToolChooserWindow {
         self.panel = panel
 
         if let screen = PanelPositioning.screenUnderMouse() ?? NSScreen.main {
-            var origin = PanelPositioning.centerOrigin(for: panel.frame, on: screen)
-            // Sit a little above centre, like a game HUD, not dead centre.
-            origin.y += screen.visibleFrame.height * 0.08
-            panel.setFrameOrigin(origin)
+            panel.setFrameOrigin(PanelPositioning.centerOrigin(for: panel.frame, on: screen))
         }
 
         state.highlighted = nil
@@ -62,6 +59,7 @@ final class ToolChooserWindow {
             installMonitors()
         }
         installClickAwayMonitor()
+        startPointerTracking()
         NSLog("Magpie: chooser shown via \(LeaderKey.shared.status == .eventTap ? "tap" : "key window") frontmost=\(NSWorkspace.shared.frontmostApplication?.localizedName ?? "?")")
     }
 
@@ -69,7 +67,48 @@ final class ToolChooserWindow {
         LeaderKey.shared.keyInterceptor = nil
         removeMonitors()
         removeClickAwayMonitor()
+        stopPointerTracking()
         panel?.orderOut(nil)
+    }
+
+    // MARK: - Pointer
+
+    private var pointerTimer: Timer?
+
+    /// The panel is never key or active, so hover tracking is unreliable;
+    /// polling the pointer is cheap and works regardless of event routing.
+    /// The mouse must move after the wheel opens before it counts, so the
+    /// wheel does not open with a random wedge lit.
+    private func startPointerTracking() {
+        stopPointerTracking()
+        let start = NSEvent.mouseLocation
+        var armed = false
+        pointerTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 40, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, let panel = self.panel, panel.isVisible else { return }
+                let mouse = NSEvent.mouseLocation
+                if !armed {
+                    guard hypot(mouse.x - start.x, mouse.y - start.y) > 6 else { return }
+                    armed = true
+                }
+                if let tool = self.tool(atScreenPoint: mouse) {
+                    if self.state.highlighted != tool { self.state.highlighted = tool }
+                }
+            }
+        }
+    }
+
+    private func stopPointerTracking() {
+        pointerTimer?.invalidate()
+        pointerTimer = nil
+    }
+
+    private func tool(atScreenPoint p: NSPoint) -> Tool? {
+        guard let panel else { return nil }
+        let frame = panel.frame
+        // Screen y goes up; the view's y goes down.
+        let local = CGPoint(x: p.x - frame.minX, y: frame.maxY - p.y)
+        return ToolChooserView.tool(at: local)
     }
 
     private func pick(_ tool: Tool) {
@@ -86,19 +125,36 @@ final class ToolChooserWindow {
 
     /// A click anywhere outside the panel dismisses it, whichever app gets
     /// the click. (Clicks inside are delivered to the panel's own views.)
+    private var localClickMonitor: Any?
+
     private func installClickAwayMonitor() {
         guard clickAwayMonitor == nil else { return }
         clickAwayMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            Task { @MainActor in
-                guard let self, let panel = self.panel, panel.isVisible else { return }
-                if !panel.frame.contains(NSEvent.mouseLocation) { self.hide() }
-            }
+            Task { @MainActor in self?.handleClick(at: NSEvent.mouseLocation) }
+        }
+        localClickMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] event in
+            guard let self, self.isVisible, event.window === self.panel else { return event }
+            self.handleClick(at: NSEvent.mouseLocation)
+            return nil
         }
     }
 
     private func removeClickAwayMonitor() {
         if let clickAwayMonitor { NSEvent.removeMonitor(clickAwayMonitor) }
         clickAwayMonitor = nil
+        if let localClickMonitor { NSEvent.removeMonitor(localClickMonitor) }
+        localClickMonitor = nil
+    }
+
+    private func handleClick(at screenPoint: NSPoint) {
+        guard let panel, panel.isVisible else { return }
+        guard panel.frame.contains(screenPoint) else {
+            hide()
+            return
+        }
+        if let tool = tool(atScreenPoint: screenPoint) {
+            pick(tool)
+        }
     }
 
     // MARK: - Keys (Carbon-fallback path)
@@ -169,7 +225,7 @@ final class ToolChooserWindow {
 
     private func makePanel() -> NSPanel {
         let panel = HUDPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 880, height: 230),
+            contentRect: NSRect(x: 0, y: 0, width: ToolChooserView.size, height: ToolChooserView.size),
             styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -192,15 +248,12 @@ final class ToolChooserWindow {
         ]
 
         let view = ToolChooserView(
-            onPick: { [weak self] tool in self?.pick(tool) },
-            onHover: { [weak self] tool in self?.state.highlighted = tool }
+            onPick: { [weak self] tool in self?.pick(tool) }
         )
         .environmentObject(state)
 
         let host = KeyableHostingView(rootView: view)
         panel.contentView = host
-        // One card per tool: let the content dictate the panel size.
-        panel.setContentSize(host.fittingSize)
         return panel
     }
 }

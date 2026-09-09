@@ -33,7 +33,7 @@ struct ChatView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Image(systemName: "bubble.left.and.text.bubble.fill")
+            Image(systemName: "text.bubble.fill")
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(.secondary)
             Text("Claude")

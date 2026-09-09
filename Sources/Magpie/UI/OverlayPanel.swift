@@ -1,7 +1,7 @@
 import AppKit
 
 /// The chrome shared by the activating overlay panels (launcher, search,
-/// calculator): a floating, title-less, translucent utility panel that
+/// R console): a floating, title-less, translucent utility panel that
 /// remembers its position. Mirrors HistoryWindow.makePanel.
 enum OverlayPanel {
     @MainActor

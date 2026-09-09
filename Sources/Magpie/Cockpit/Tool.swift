@@ -10,7 +10,7 @@ enum Tool: String, CaseIterable, Identifiable {
     case capture
     case apps
     case search
-    case calculator
+    case rconsole
     case audio
     case chat
     case github
@@ -26,7 +26,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .capture: return "x"
         case .apps: return "l"
         case .search: return "s"
-        case .calculator: return "m"
+        case .rconsole: return "r"
         case .audio: return "a"
         case .chat: return "t"
         case .github: return "g"
@@ -39,7 +39,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .clipboard: return ["v"]
         case .apps: return ["p"]
         case .search: return ["f"]
-        case .calculator: return ["=", "k"]
+        case .rconsole: return ["m", "=", "k"]
         case .audio: return ["o", "u"]
         case .chat: return ["i", "q"]
         case .github: return ["h"]
@@ -55,7 +55,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .capture: return "Capture"
         case .apps: return "Launch"
         case .search: return "Search"
-        case .calculator: return "Math"
+        case .rconsole: return "R"
         case .audio: return "Audio"
         case .chat: return "Talk"
         case .github: return "GitHub"
@@ -70,7 +70,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .capture: return "screen region"
         case .apps: return "apps"
         case .search: return "files"
-        case .calculator: return "calculator"
+        case .rconsole: return "console · plots"
         case .audio: return "in / out"
         case .chat: return "Claude chat"
         case .github: return "new issue"
@@ -85,9 +85,9 @@ enum Tool: String, CaseIterable, Identifiable {
         case .capture: return "viewfinder"
         case .apps: return "square.grid.2x2.fill"
         case .search: return "magnifyingglass"
-        case .calculator: return "function"
+        case .rconsole: return "r.square.fill"
         case .audio: return "speaker.wave.2.fill"
-        case .chat: return "bubble.left.and.text.bubble.fill"
+        case .chat: return "text.bubble.fill"
         case .github: return "smallcircle.filled.circle"
         }
     }
@@ -111,7 +111,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .capture: return Color(red: 0.62, green: 0.48, blue: 1.0)
         case .apps: return Color(red: 0.30, green: 0.82, blue: 0.62)
         case .search: return Color(red: 0.95, green: 0.55, blue: 0.25)
-        case .calculator: return Color(red: 0.45, green: 0.85, blue: 0.95)
+        case .rconsole: return Color(red: 0.25, green: 0.55, blue: 0.95)
         case .audio: return Color(red: 0.93, green: 0.42, blue: 0.68)
         case .chat: return Color(red: 0.85, green: 0.55, blue: 0.35)
         case .github: return Color(red: 0.55, green: 0.52, blue: 0.95)
@@ -129,7 +129,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case "screenshot", "screen": return .capture
         case "app", "launcher", "launch": return .apps
         case "find", "files", "spotlight": return .search
-        case "calc", "calculator": return .calculator
+        case "calc", "calculator", "math", "console": return .rconsole
         case "sound", "output", "input", "devices": return .audio
         case "claude", "ask", "talk": return .chat
         case "issue", "issues", "gh": return .github
@@ -154,7 +154,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .capture: ScreenCaptureWindow.shared.begin()
         case .apps: LauncherWindow.shared.show()
         case .search: SpotlightWindow.shared.show()
-        case .calculator: CalculatorWindow.shared.show()
+        case .rconsole: RConsoleWindow.shared.show()
         case .audio: AudioWindow.shared.show()
         case .chat: ChatWindow.shared.show()
         case .github: GitHubWindow.shared.show()
@@ -171,7 +171,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .capture: ScreenCaptureWindow.shared.begin()
         case .apps: LauncherWindow.shared.toggle()
         case .search: SpotlightWindow.shared.toggle()
-        case .calculator: CalculatorWindow.shared.toggle()
+        case .rconsole: RConsoleWindow.shared.toggle()
         case .audio: AudioWindow.shared.toggle()
         case .chat: ChatWindow.shared.toggle()
         case .github: GitHubWindow.shared.toggle()

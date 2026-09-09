@@ -173,7 +173,7 @@ final class ChatManager: ObservableObject {
     - System: `sw_vers`, `uptime`, `df -h /`, `top -l 1 | head -15`, `pmset -g batt`,
       `system_profiler SPHardwareDataType`.
     - Network: `ipconfig getifaddr en0`, `networksetup -getairportnetwork en0`.
-    - Open a Magpie tool: `open magpie://<clipboard|emoji|dictation|capture|apps|search|calculator|audio|chat>`.
+    - Open a Magpie tool: `open magpie://<clipboard|emoji|dictation|capture|apps|search|r|audio|chat|github>`.
     """
 
     private func launch(executable: String, prompt: String) {

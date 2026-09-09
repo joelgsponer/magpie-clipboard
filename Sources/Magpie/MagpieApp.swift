@@ -55,8 +55,8 @@ struct MenuContent: View {
             SpotlightWindow.shared.show()
         }
 
-        Button("Calculator  ⌘␣ M") {
-            CalculatorWindow.shared.show()
+        Button("R Console  ⌘␣ R") {
+            RConsoleWindow.shared.show()
         }
 
         Button("Audio Devices  ⌘␣ A") {
@@ -164,6 +164,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             func param(_ name: String) -> String? { query.first { $0.name == name }?.value }
             if tool == .chat, let ask = param("ask"), !ask.isEmpty {
                 ChatWindow.shared.show(ask: ask)
+            } else if tool == .rconsole, let code = param("run"), !code.isEmpty {
+                RConsoleWindow.shared.show(run: code)
             } else if tool == .github, param("repo") != nil || param("title") != nil {
                 GitHubWindow.shared.show(repo: param("repo"), title: param("title"), body: param("body"))
             } else {
