@@ -82,6 +82,7 @@ struct MenuContent: View {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Self.redirectLogToFileIfHeadless()
         NSLog("Magpie: didFinishLaunching pid=\(ProcessInfo.processInfo.processIdentifier)")
         NSApp.setActivationPolicy(.accessory)
 
@@ -127,5 +128,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Warm the app index so the first ⌘Space A is instant.
         AppIndex.shared.refreshIfStale()
+    }
+
+    /// A menu-bar app launched by LaunchServices has no terminal, and its
+    /// NSLog lines do not reliably surface in `log show`. When stderr is not
+    /// a TTY, send it to ~/Library/Logs/Magpie/magpie.log (truncated per
+    /// launch) so "why didn't ⌘Space work" has an answer.
+    private static func redirectLogToFileIfHeadless() {
+        guard isatty(STDERR_FILENO) == 0 else { return }
+        let dir = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Logs/Magpie", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let path = dir.appendingPathComponent("magpie.log").path
+        freopen(path, "w", stderr)
     }
 }
