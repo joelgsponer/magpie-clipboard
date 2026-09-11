@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreAudio
 import FluidAudio
 
 enum DictationState: Equatable {
@@ -140,6 +141,14 @@ final class DictationManager: ObservableObject {
         state = .transcribing
         let sessionID = currentSessionID
         let buffers = bufferAccumulator.drain()
+
+        // Distinguish "the tap never fired" from "the tap fired but every
+        // sample was zero" — both surface to the user as a flat waveform and
+        // a failed dictation, but they have completely different causes.
+        let frames = buffers.reduce(0) { $0 + Int($1.frameLength) }
+        let peak = buffers.reduce(Float(0)) { max($0, Self.peakLevel(of: $1)) }
+        NSLog("Magpie: dictation — captured \(buffers.count) buffers, \(frames) frames, peak=\(peak)")
+
         levelMeter.reset()
         teardownEngine()
 
@@ -199,6 +208,18 @@ final class DictationManager: ObservableObject {
 
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
+
+        // Record the conditions, not just the outcome. A silent capture has
+        // several indistinguishable causes — a denied mic grant, a stale
+        // device binding, a device at an unexpected rate — and all of them
+        // present as "no audio". These three facts separate them.
+        NSLog("""
+        Magpie: dictation — mic=\(Microphone.statusDescription) \
+        device=\(Self.boundInputDevice(input)) \
+        in=\(format.sampleRate)Hz/\(format.channelCount)ch \
+        out=\(engine.outputNode.outputFormat(forBus: 0).sampleRate)Hz
+        """)
+
         input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
             self?.bufferAccumulator.append(buffer)
             self?.levelMeter.record(Self.rmsLevel(of: buffer))
@@ -263,6 +284,45 @@ final class DictationManager: ObservableObject {
             state = .error("Speech recognition failed: \(error.localizedDescription)")
             completion(nil)
         }
+    }
+
+    /// Absolute peak sample in a buffer, for diagnosing silent captures.
+    private static func peakLevel(of buffer: AVAudioPCMBuffer) -> Float {
+        guard let channelData = buffer.floatChannelData else { return 0 }
+        var peak: Float = 0
+        for i in 0..<Int(buffer.frameLength) {
+            peak = max(peak, abs(channelData[0][i]))
+        }
+        return peak
+    }
+
+    /// The hardware device the engine's input node actually bound to.
+    /// AVAudioEngine does not necessarily pick the device you expect: when the
+    /// default input and output differ it binds to a synthesized
+    /// `CADefaultDeviceAggregate` rather than the microphone itself, and that
+    /// aggregate can be rebuilt or go stale as Bluetooth hardware comes and
+    /// goes. The sample rate alone is not enough to identify it.
+    private static func boundInputDevice(_ input: AVAudioInputNode) -> String {
+        guard let unit = input.audioUnit else { return "<no audio unit>" }
+
+        var deviceID = AudioDeviceID(0)
+        var idSize = UInt32(MemoryLayout<AudioDeviceID>.size)
+        guard AudioUnitGetProperty(
+            unit, kAudioOutputUnitProperty_CurrentDevice,
+            kAudioUnitScope_Global, 0, &deviceID, &idSize) == noErr
+        else { return "<device query failed>" }
+
+        var name: Unmanaged<CFString>?
+        var nameSize = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioObjectPropertyName,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain)
+        guard AudioObjectGetPropertyData(deviceID, &address, 0, nil, &nameSize, &name) == noErr,
+              let resolved = name?.takeRetainedValue()
+        else { return "id=\(deviceID)" }
+
+        return "\(resolved as String) (id=\(deviceID))"
     }
 
     private static func rmsLevel(of buffer: AVAudioPCMBuffer) -> Float {
